@@ -36,11 +36,15 @@ Mock data only. No Supabase, real auth or external APIs.
 - [x] Migrations applied to the Supabase project; tested end to end in the browser (sign-up, wishlist, status, rating + review, diary, list create/reorder/delete, favorites, feed, reload persistence)
 - [x] Removing a game from the library also removes its library feed events
 - [x] Fix: fetches that overlap a write are discarded and refetched (deleted items no longer reappear)
+- [x] Tested: profile edit, password-reset request, auth-link error handling and open-redirect protection, anonymous tampering blocked
+- [x] Production smoke test; unknown game pages return HTTP 404; baseline security headers (no framing, nosniff, referrer policy)
+- [ ] Following another user end to end (needs a second account)
 - [ ] Avatar uploads (Supabase Storage)
 - [ ] Custom SMTP for auth emails (Supabase's built-in email is rate-limited)
 
 ## Phase 3 — Real game data
-- [ ] Evaluate providers (IGDB and others): licensing, image rights, rate limits, caching, attribution
+- [x] Evaluate providers: IGDB recommended (see docs/GAME_DATA_PROVIDERS.md)
+- [ ] Twitch developer app credentials; IGDB commercial partnership (partner@igdb.com)
 - [ ] Provider adapter implementing `CatalogProvider`, plus a sync job into `games`
 - [ ] Real release dates for Recently Released; real search with pagination
 - [ ] Filters: genre, platform, release year
@@ -63,6 +67,8 @@ Mock data only. No Supabase, real auth or external APIs.
 - The client loads bounded slices of community data (e.g. the 30 newest public lists, 200 reviews per game). Pagination comes with real catalog volumes.
 - Community ratings are computed from up to 200 loaded reviews per game; a database aggregate will replace this.
 - Search is client-side over the catalog and isn't reflected in the URL.
+- Profile and list pages fetch their title from the database for metadata (about 1 s on a cold request); add caching later.
+- No full Content-Security-Policy yet (only `frame-ancestors`).
 - List and favourite reordering uses buttons, not drag and drop.
 - Avatars are generated initials; there are no uploads.
 - Featured lists are set by staff in the Supabase dashboard (`lists.featured`); there is no admin UI yet.

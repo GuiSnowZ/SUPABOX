@@ -2,7 +2,6 @@ import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
 import { GameCover } from "@/components/games/game-cover";
 import {
   CommunityRating,
@@ -10,8 +9,9 @@ import {
   GameDiary,
   GameReviews,
 } from "@/components/games/game-user-panel";
-import { Badge, Container, Skeleton } from "@/components/ui/primitives";
+import { Badge, Container } from "@/components/ui/primitives";
 import { catalog, isReleased } from "@/lib/catalog";
+import type { Game } from "@/types";
 import { formatReleaseDate } from "@/lib/utils";
 
 export async function generateStaticParams() {
@@ -29,30 +29,20 @@ export async function generateMetadata({ params }: PageProps<"/games/[slug]">): 
   };
 }
 
-export default function GamePage({ params }: PageProps<"/games/[slug]">) {
-  return (
-    <Suspense fallback={<GameSkeleton />}>
-      <GameDetails params={params} />
-    </Suspense>
-  );
-}
+/**
+ * Unknown slugs must 404 before streaming starts, so the slug is checked here
+ * rather than inside a Suspense boundary. Every known game is prerendered by
+ * generateStaticParams, so this never blocks a real game page.
+ */
+export const instant = false;
 
-function GameSkeleton() {
-  return (
-    <Container className="grid gap-8 pt-16 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr_260px]">
-      <Skeleton className="mx-auto aspect-[3/4] w-48 md:w-full" />
-      <div className="space-y-3">
-        <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
-        <Skeleton className="mt-6 h-24 w-full" />
-      </div>
-    </Container>
-  );
-}
-
-async function GameDetails({ params }: { params: PageProps<"/games/[slug]">["params"] }) {
+export default async function GamePage({ params }: PageProps<"/games/[slug]">) {
   const game = await catalog.getGameBySlug((await params).slug);
   if (!game) notFound();
+  return <GameDetails game={game} />;
+}
+
+function GameDetails({ game }: { game: Game }) {
   const released = isReleased(game);
 
   return (

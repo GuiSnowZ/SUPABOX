@@ -46,4 +46,5 @@ Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supaba
 - [Architecture](docs/ARCHITECTURE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Decisions](docs/DECISIONS.md)
+- [Game data providers](docs/GAME_DATA_PROVIDERS.md)
 - Database schema: [`supabase/migrations/`](supabase/migrations/), tests in [`supabase/tests/`](supabase/tests/)
