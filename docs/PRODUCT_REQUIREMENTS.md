@@ -56,8 +56,8 @@ Title, cover, description, release date, developer, publisher, platforms, genres
 
 ### 4.4 Games page (`/games`)
 - Search by title, studio, genre or platform.
-- **Recently Released:** released titles only, newest first, in a responsive cover grid.
-- **Coming Soon** section for upcoming games.
+- **Recently Released:** released titles only, in a responsive cover grid. It shows the biggest releases of the last 60 days, most popular first. Popularity is IGDB player ratings plus pre-release hype. If the period is quiet, the window widens to 120 days, then to 365 days. (Product decision, 2026-11-10: big releases on top rather than strict date order.)
+- **Coming Soon:** the most anticipated games releasing in the next six months, shown soonest first.
 - Each card shows cover, title, release date, platforms, a quick wishlist toggle and a link to the details page.
 - Loading, empty and error states.
 - Planned: filters by genre, platform, release year and popularity.

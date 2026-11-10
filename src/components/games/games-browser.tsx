@@ -93,7 +93,8 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
       ) : (
         <div className="space-y-14">
           <section aria-labelledby="recent-heading">
-            <SectionHeader id="recent-heading" title="Recently Released" count={recent.length} />
+            <SectionHeader id="recent-heading" title="Recently Released" />
+            <p className="-mt-2 mb-5 text-xs text-faint">The biggest releases of the last two months, most popular first.</p>
             {recent.length ? (
               <GameGrid>
                 {recent.map((g) => (
@@ -109,7 +110,8 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
           </section>
           {upcoming.length ? (
             <section aria-labelledby="upcoming-heading">
-              <SectionHeader id="upcoming-heading" title="Coming Soon" count={upcoming.length} />
+              <SectionHeader id="upcoming-heading" title="Coming Soon" />
+              <p className="-mt-2 mb-5 text-xs text-faint">The most anticipated games of the next six months.</p>
               <GameGrid>
                 {upcoming.map((g) => (
                   <GameCard key={g.id} game={g} />

@@ -14,6 +14,10 @@ import { GAME_COLUMNS, type GameDbRow, todayIso, toGame } from "./rows";
 
 const MIN_RECENT_POPULARITY = 3;
 const MIN_UPCOMING_POPULARITY = 10;
+/** "Recent" means released in the last N days; the biggest of those are shown first. */
+const RECENT_WINDOW_DAYS = 60;
+/** Upcoming games considered: releasing within the next N days. */
+const UPCOMING_WINDOW_DAYS = 180;
 
 function db() {
   const client = getPublicSupabase();
@@ -21,28 +25,38 @@ function db() {
   return client;
 }
 
-/** Released in the last year, newest first (only games people actually track). */
+const daysFromNow = (days: number) => todayIso(new Date(Date.now() + days * 86_400_000));
+
+/**
+ * The biggest releases of the last two months, most popular first
+ * (popularity = IGDB player ratings + pre-release hype, refreshed by the sync).
+ * Falls back to a wider window when a quiet period has too few games.
+ */
 export async function getRecentlyReleased(limit = 18): Promise<Game[]> {
   "use cache";
   cacheLife("hours");
   cacheTag("games");
   const today = todayIso();
-  const yearAgo = todayIso(new Date(Date.now() - 365 * 86_400_000));
-  const { data, error } = await db()
-    .from("games")
-    .select(GAME_COLUMNS)
-    .lte("release_date", today)
-    .gte("release_date", yearAgo)
-    .gte("popularity", MIN_RECENT_POPULARITY)
-    .not("cover_url", "is", null)
-    .order("release_date", { ascending: false })
-    .order("popularity", { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(error.message);
-  return (data as GameDbRow[]).map(toGame);
+  let games: Game[] = [];
+  for (const window of [RECENT_WINDOW_DAYS, 120, 365]) {
+    const { data, error } = await db()
+      .from("games")
+      .select(GAME_COLUMNS)
+      .lte("release_date", today)
+      .gte("release_date", daysFromNow(-window))
+      .gte("popularity", MIN_RECENT_POPULARITY)
+      .not("cover_url", "is", null)
+      .order("popularity", { ascending: false })
+      .order("release_date", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    games = (data as GameDbRow[]).map(toGame);
+    if (games.length >= limit) break;
+  }
+  return games;
 }
 
-/** Upcoming games with a release date, soonest first. */
+/** The most anticipated games of the next six months, shown soonest first. */
 export async function getUpcoming(limit = 12): Promise<Game[]> {
   "use cache";
   cacheLife("hours");
@@ -51,12 +65,15 @@ export async function getUpcoming(limit = 12): Promise<Game[]> {
     .from("games")
     .select(GAME_COLUMNS)
     .gt("release_date", todayIso())
+    .lte("release_date", daysFromNow(UPCOMING_WINDOW_DAYS))
     .gte("popularity", MIN_UPCOMING_POPULARITY)
     .not("cover_url", "is", null)
-    .order("release_date", { ascending: true })
+    .order("popularity", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
-  return (data as GameDbRow[]).map(toGame);
+  return (data as GameDbRow[])
+    .map(toGame)
+    .sort((a, b) => (a.releaseDate ?? "").localeCompare(b.releaseDate ?? ""));
 }
 
 async function findBySlug(slug: string): Promise<Game | null> {

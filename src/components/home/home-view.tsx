@@ -152,7 +152,7 @@ export function HomeView({ recent }: { recent: Game[] }) {
         ) : null}
 
         <section aria-labelledby="new-heading">
-          <SectionHeader id="new-heading" title="Featured new releases" href="/games" />
+          <SectionHeader id="new-heading" title="Biggest new releases" href="/games" />
           <GameGrid>
             {recent.slice(0, 6).map((g, i) => (
               <GameCard key={g.id} game={g} className={i === 4 ? "md:max-lg:hidden" : i === 5 ? "md:max-xl:hidden" : undefined} />

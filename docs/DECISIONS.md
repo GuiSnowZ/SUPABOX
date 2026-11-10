@@ -58,3 +58,6 @@ IGDB has about 284k games with covers. Storing all of them would approach the Su
 
 ### D-019 — Images served directly from IGDB's CDN (2026-11-10)
 Covers, logos and artwork use IGDB's pre-sized image URLs in plain `<img>` tags with lazy loading. Proxying them through Next's image optimizer would add cost (Vercel image quotas) for no visual gain. We may revisit this if we need our own caching or image formats.
+
+### D-020 — Recently Released ranks by popularity, not date (2026-11-10)
+Ordering strictly by date filled the section with small titles released that day. At your request, the section now shows the biggest releases of the last 60 days, most popular first (IGDB rating count plus hype; wider windows if there are too few). Coming Soon picks the most anticipated games of the next six months and shows them soonest first. Popularity stays current only while the catalog sync runs, which is why scheduling the sync is on the roadmap.
