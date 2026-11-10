@@ -1,0 +1,130 @@
+// Applies every migration to an in-memory Postgres (PGlite) with a minimal
+// stub of Supabase's auth schema and API roles, then checks constraints,
+// triggers, RPCs and Row Level Security as different users.
+// Run: npm run test:db
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PGlite } from "@electric-sql/pglite";
+import { citext } from "@electric-sql/pglite/contrib/citext";
+
+const migDir = fileURLToPath(new URL("../migrations", import.meta.url));
+const db = new PGlite({ extensions: { citext } });
+
+await db.exec(`
+  create schema auth; create schema extensions;
+  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+  create function auth.uid() returns uuid language sql stable as
+    $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
+  grant usage on schema public, extensions, auth to anon, authenticated, service_role;
+  grant execute on function auth.uid() to anon, authenticated;
+`);
+for (const f of readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort()) {
+  await db.exec(readFileSync(join(migDir, f), "utf8"));
+  console.log("applied", f);
+}
+// Supabase grants table privileges to API roles by default; RLS does the filtering.
+await db.exec(`grant select, insert, update, delete on all tables in schema public to anon, authenticated, service_role;`);
+
+let failures = 0;
+const ok = (name, cond) => { console.log(`${cond ? "PASS" : "FAIL"}  ${name}`); if (!cond) failures++; };
+const as = async (uid, sql, params) => {
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub', '${uid ?? ""}', false);`);
+  await db.exec(uid ? "set role authenticated" : "set role anon");
+  try { return await db.query(sql, params); } finally { await db.exec("reset role"); }
+};
+const fails = async (uid, sql, params) => { try { await as(uid, sql, params); return false; } catch { return true; } };
+
+const A = "11111111-1111-4111-8111-111111111111";
+const B = "22222222-2222-4222-8222-222222222222";
+const G1 = "00000000-0000-4000-8000-000000000001", G2 = "00000000-0000-4000-8000-000000000002";
+const ids = (n) => Array.from({ length: n }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`);
+
+// Sign-up trigger
+await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'a@x.test', '{"username":"Alice_1","display_name":"Alice"}'), ($2, 'b@x.test', '{"username":"bad name!"}')`, [A, B]);
+const profs = (await db.query("select id, username, display_name, avatar_hue from public.profiles order by username")).rows;
+ok("profiles auto-created for both users", profs.length === 2);
+ok("username lower-cased", profs.some((p) => p.username === "alice_1" && p.display_name === "Alice"));
+ok("invalid username falls back to player_*", profs.some((p) => p.username.startsWith("player_")));
+ok("taken username (any case) is unavailable", (await as(null, "select public.is_username_available('ALICE_1') v")).rows[0].v === false);
+ok("free username is available", (await as(null, "select public.is_username_available('zed') v")).rows[0].v === true);
+ok("catalog seeded with 22 games", (await db.query("select count(*)::int n from public.games")).rows[0].n === 22);
+
+// Library / wishlist
+await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'want_to_play')", [A, G1]);
+ok("cannot wishlist the same game twice", await fails(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'want_to_play')", [A, G1]));
+ok("cannot write another user's library", await fails(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'playing')", [B, G1]));
+ok("anon cannot write library", await fails(null, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'playing')", [A, G2]));
+await as(A, "update public.user_games set status = 'playing' where user_id = $1 and game_id = $2", [A, G1]);
+await as(A, "update public.user_games set status = 'completed' where user_id = $1 and game_id = $2", [A, G1]);
+await as(A, "update public.user_games set status = 'playing' where user_id = $1 and game_id = $2", [A, G1]);
+const acts = (await db.query("select type, count(*)::int n from public.activities where user_id = $1 group by type", [A])).rows;
+ok("activities recorded once per type", acts.length === 3 && acts.every((a) => a.n === 1));
+ok("clients cannot forge activities", await fails(A, "insert into public.activities (user_id, type, game_id) values ($1, 'completed', $2)", [A, G2]));
+const bUpd = await as(B, "update public.user_games set status = 'dropped' where user_id = $1 returning *", [A]);
+ok("other user's update affects 0 rows", bUpd.rows.length === 0);
+
+// Removing a game from the library removes its library events (not reviews)
+await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'playing')", [A, G2]);
+await as(A, "delete from public.user_games where user_id = $1 and game_id = $2", [A, G2]);
+ok("library removal clears its feed events", (await db.query("select count(*)::int n from public.activities where user_id = $1 and game_id = $2", [A, G2])).rows[0].n === 0);
+
+// Reviews
+await as(A, "insert into public.reviews (user_id, game_id, rating, body) values ($1, $2, 4.5, 'Great')", [A, G1]);
+ok("one review per user/game", await fails(A, "insert into public.reviews (user_id, game_id, rating) values ($1, $2, 3)", [A, G1]));
+ok("rating must be half-steps", await fails(A, "insert into public.reviews (user_id, game_id, rating) values ($1, $2, 4.3)", [A, G2]));
+ok("rating max 5", await fails(A, "insert into public.reviews (user_id, game_id, rating) values ($1, $2, 5.5)", [A, G2]));
+ok("rating or body required", await fails(A, "insert into public.reviews (user_id, game_id) values ($1, $2)", [A, G2]));
+ok("review activity recorded", (await db.query("select count(*)::int n from public.activities where type='published_review'")).rows[0].n === 1);
+const bDel = await as(B, "delete from public.reviews where user_id = $1 returning id", [A]);
+ok("cannot delete others' reviews", bDel.rows.length === 0);
+ok("anyone can read reviews", (await as(null, "select count(*)::int n from public.reviews")).rows[0].n === 1);
+
+// Lists
+const L1 = "33333333-3333-4333-8333-333333333333";
+await as(A, "select public.save_list($1, 'Best', '', 'public', $2::uuid[])", [L1, [G1, G2]]);
+await as(A, "select public.save_list($1, 'Best!', 'd', 'private', $2::uuid[])", [L1, [G2, G1]]);
+const items = (await db.query("select game_id, position from public.list_items where list_id = $1 order by position", [L1])).rows;
+ok("save_list reorders atomically", items.length === 2 && items[0].game_id === G2 && items[1].game_id === G1);
+ok("save_list rejects duplicates", await fails(A, "select public.save_list($1, 'x', '', 'public', $2::uuid[])", [L1, [G1, G1]]));
+ok("other user cannot overwrite list", await fails(B, "select public.save_list($1, 'hacked', '', 'public', $2::uuid[])", [L1, [G1]]));
+ok("private list hidden from others", (await as(B, "select count(*)::int n from public.lists where id = $1", [L1])).rows[0].n === 0);
+ok("private list items hidden from others", (await as(B, "select count(*)::int n from public.list_items where list_id = $1", [L1])).rows[0].n === 0);
+ok("private list hidden from anon", (await as(null, "select count(*)::int n from public.lists")).rows[0].n === 0);
+ok("owner sees private list", (await as(A, "select count(*)::int n from public.lists where id = $1", [L1])).rows[0].n === 1);
+ok("users cannot feature their own list", await fails(A, "update public.lists set featured = true where id = $1", [L1]));
+ok("users cannot insert featured list", await fails(A, "insert into public.lists (user_id, title, featured) values ($1, 'x', true)", [A]));
+ok("anon cannot call save_list", await fails(null, "select public.save_list(gen_random_uuid(), 'x', '', 'public', '{}'::uuid[])"));
+await db.exec("update public.lists set featured = true where id = '" + L1 + "'");
+ok("staff (postgres) can feature lists", (await db.query("select featured from public.lists where id = $1", [L1])).rows[0].featured === true);
+
+// Favorites
+await as(A, "select public.set_favorite_games($1::uuid[])", [ids(5)]);
+await as(A, "select public.set_favorite_games($1::uuid[])", [[ids(5)[4], ...ids(4)]]);
+const fav = (await db.query("select game_id from public.user_favorite_games where user_id = $1 order by position", [A])).rows;
+ok("favorites keep order after reorder", fav.length === 5 && fav[0].game_id === ids(5)[4]);
+ok("max five favorites (rpc)", await fails(A, "select public.set_favorite_games($1::uuid[])", [ids(6)]));
+ok("max five favorites (table)", await fails(A, "insert into public.user_favorite_games (user_id, game_id, position) values ($1, $2, 5)", [A, ids(7)[6]]));
+
+// Follows
+await as(A, "insert into public.follows (follower_id, following_id) values ($1, $2)", [A, B]);
+ok("cannot follow yourself", await fails(A, "insert into public.follows (follower_id, following_id) values ($1, $1)", [A]));
+ok("cannot create follows for others", await fails(A, "insert into public.follows (follower_id, following_id) values ($1, $2)", [B, A]));
+
+// Profiles
+ok("cannot edit another profile", (await as(B, "update public.profiles set bio = 'x' where id = $1 returning id", [A])).rows.length === 0);
+await as(A, "update public.profiles set bio = 'hello' where id = $1", [A]);
+ok("can edit own profile", (await db.query("select bio from public.profiles where id = $1", [A])).rows[0].bio === "hello");
+ok("games are read-only for users", await fails(A, "insert into public.games (slug, title, provider, provider_id) values ('x', 'x', 'm', '1')"));
+
+// Diary
+ok("finish date after start", await fails(A, "insert into public.play_sessions (user_id, game_id, started_on, finished_on) values ($1, $2, '2026-01-02', '2026-01-01')", [A, G1]));
+
+// Account deletion cascades
+await db.query("delete from auth.users where id = $1", [A]);
+const left = (await db.query("select (select count(*) from public.reviews)::int r, (select count(*) from public.lists)::int l, (select count(*) from public.follows)::int f")).rows[0];
+ok("deleting the account removes the user's data", left.r === 0 && left.l === 0 && left.f === 0);
+
+console.log(failures ? `\n${failures} FAILED` : "\nALL PASSED");
+process.exit(failures ? 1 : 0);

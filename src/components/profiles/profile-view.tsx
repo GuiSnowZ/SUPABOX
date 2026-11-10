@@ -1,0 +1,282 @@
+"use client";
+
+import { BookMarked, Library, ListPlus, Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { GameCover } from "@/components/games/game-cover";
+import { GameCard } from "@/components/games/game-card";
+import { ListCard, ListGrid } from "@/components/lists/list-card";
+import { LoadError, PageSkeleton, RequireUser } from "@/components/layout/require-user";
+import { ReviewCard } from "@/components/reviews/review-card";
+import { Avatar } from "@/components/ui/avatar";
+import { Button, ButtonLink } from "@/components/ui/button";
+import { Container, EmptyState, SectionHeader } from "@/components/ui/primitives";
+import { StarRating } from "@/components/ui/star-rating";
+import {
+  getFavoriteGames,
+  getFollowerIds,
+  getFollowingIds,
+  getLibrary,
+  getListsByUser,
+  getPlaySessions,
+  getProfileByUsername,
+  getRecentRatings,
+  getReviewsByUser,
+  hasText,
+  isFollowing,
+} from "@/features/app/selectors";
+import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
+import { promptSignIn, toast } from "@/features/app/ui-store";
+import { getGameById } from "@/lib/catalog";
+import { formatDate, formatShortDate } from "@/lib/utils";
+import type { Game, Profile } from "@/types";
+import { FavoriteGames } from "./favorite-games";
+
+function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
+  const inner = (
+    <>
+      <span className="block text-lg font-semibold tabular-nums text-fg">{value}</span>
+      <span className="text-xs text-muted">{label}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="rounded-md hover:[&>span:first-child]:text-accent">
+      {inner}
+    </Link>
+  ) : (
+    <div>{inner}</div>
+  );
+}
+
+function FollowButton({ profile }: { profile: Profile }) {
+  const state = useAppState();
+  const following = isFollowing(state, state.currentUserId, profile.id);
+  return (
+    <Button
+      variant={following ? "secondary" : "primary"}
+      className="group/follow"
+      aria-pressed={following}
+      onClick={async () => {
+        if (!state.authReady) return;
+        if (!state.currentUserId) return promptSignIn(`Sign in to follow ${profile.displayName}.`);
+        const r = await actions.toggleFollow(profile.id);
+        if (!r.ok) return toast(r.error, "error");
+        toast(following ? `Unfollowed ${profile.displayName}` : `Following ${profile.displayName}`);
+      }}
+    >
+      {following ? (
+        <>
+          <UserCheck className="h-4 w-4 group-hover/follow:hidden" />
+          <UserX className="hidden h-4 w-4 group-hover/follow:block" />
+          <span className="group-hover/follow:hidden">Following</span>
+          <span className="hidden group-hover/follow:inline">Unfollow</span>
+        </>
+      ) : (
+        <>
+          <UserPlus className="h-4 w-4" /> Follow
+        </>
+      )}
+    </Button>
+  );
+}
+
+function Section({ children }: { children: ReactNode }) {
+  return <div className="min-w-0">{children}</div>;
+}
+
+function CoverRow({ games, empty }: { games: Game[]; empty: string }) {
+  if (!games.length) return <p className="text-sm text-muted">{empty}</p>;
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {games.map((g) => (
+        <GameCard key={g.id} game={g} showMeta={false} showWishlist={false} />
+      ))}
+    </div>
+  );
+}
+
+function ProfileContent({ profile }: { profile: Profile }) {
+  const state = useAppState();
+  const viewerId = state.currentUserId;
+  const isOwner = viewerId === profile.id;
+
+  const favorites = getFavoriteGames(state, profile.id);
+  const ratings = getRecentRatings(state, profile.id, 6);
+  const reviews = getReviewsByUser(state, profile.id).filter(hasText).slice(0, 3);
+  const lists = getListsByUser(state, profile.id, viewerId);
+  const library = getLibrary(state, profile.id);
+  const completed = library
+    .filter((e) => e.entry.status === "completed")
+    .sort((a, b) => b.entry.updatedAt.localeCompare(a.entry.updatedAt));
+  const wishlistCount = library.filter((e) => e.entry.status === "want_to_play").length;
+
+  // Recently played: currently playing first, then games from recent diary entries.
+  const recentIds = [
+    ...library.filter((e) => e.entry.status === "playing").map((e) => e.game.id),
+    ...getPlaySessions(state, profile.id).map((p) => p.gameId),
+  ];
+  const recentlyPlayed = [...new Set(recentIds)]
+    .map(getGameById)
+    .filter((g): g is Game => Boolean(g))
+    .slice(0, 8);
+
+  const followers = getFollowerIds(state, profile.id).length;
+  const followingCount = getFollowingIds(state, profile.id).length;
+
+  return (
+    <div>
+      <div className="relative border-b border-border">
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-0 opacity-40"
+          style={{
+            background: `radial-gradient(60% 120% at 20% 0%, hsl(${profile.avatarHue} 40% 30% / 0.6), transparent 70%)`,
+          }}
+        />
+        <Container className="relative flex flex-col gap-6 py-8 sm:flex-row sm:items-end sm:py-10">
+          <Avatar profile={profile} size="xl" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{profile.displayName}</h1>
+            <p className="text-sm text-muted">@{profile.username}</p>
+            {profile.bio ? <p className="mt-3 max-w-xl text-sm leading-relaxed text-fg/85">{profile.bio}</p> : null}
+            <div className="mt-5 grid grid-cols-5 gap-2 sm:flex sm:gap-x-8">
+              <Stat value={completed.length} label="Completed" />
+              <Stat value={getReviewsByUser(state, profile.id).length} label="Reviews" />
+              <Stat value={lists.length} label="Lists" />
+              <Stat value={followers} label="Followers" />
+              <Stat value={followingCount} label="Following" />
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {isOwner ? (
+              <ButtonLink href="/profile/edit" variant="secondary">
+                <Pencil className="h-4 w-4" /> Edit Profile
+              </ButtonLink>
+            ) : (
+              <FollowButton profile={profile} />
+            )}
+          </div>
+        </Container>
+      </div>
+
+      <Container className="space-y-14 pt-10">
+        {isOwner ? (
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/library" variant="secondary" size="sm">
+              <Library className="h-4 w-4" /> My Library · {library.length}
+            </ButtonLink>
+            <ButtonLink href="/library/wishlist" variant="secondary" size="sm">
+              <BookMarked className="h-4 w-4" /> My Wishlist · {wishlistCount}
+            </ButtonLink>
+          </div>
+        ) : null}
+
+        <FavoriteGames games={favorites} isOwner={isOwner} />
+
+        <section aria-labelledby="ratings-heading">
+          <SectionHeader id="ratings-heading" title="Recent Ratings" />
+          {ratings.length ? (
+            <ul className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-6">
+              {ratings.map((r) => {
+                const g = getGameById(r.gameId);
+                if (!g) return null;
+                return (
+                  <li key={r.id}>
+                    <Link href={`/games/${g.slug}`} className="group block">
+                      <GameCover game={g} showTitle={false} className="transition group-hover:ring-2 group-hover:ring-accent/60" />
+                      <p className="mt-2 truncate text-sm font-medium group-hover:text-accent">{g.title}</p>
+                    </Link>
+                    {r.rating !== null ? <StarRating value={r.rating} size="xs" className="mt-1" /> : null}
+                    <p className="mt-0.5 text-xs text-faint">
+                      <time dateTime={r.updatedAt}>{formatShortDate(r.updatedAt)}</time>
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">No ratings yet.</p>
+          )}
+        </section>
+
+        <div className="grid gap-14 lg:grid-cols-2">
+          <Section>
+            <SectionHeader title="Recently Played" />
+            <CoverRow games={recentlyPlayed.slice(0, 4)} empty="Nothing played recently." />
+          </Section>
+          <Section>
+            <SectionHeader title="Completed" count={completed.length} href={isOwner ? "/library" : undefined} />
+            <CoverRow games={completed.slice(0, 4).map((e) => e.game)} empty="No completed games yet." />
+          </Section>
+        </div>
+
+        <section aria-labelledby="lists-heading">
+          <SectionHeader id="lists-heading" title={isOwner ? "My Lists" : "Lists"} count={lists.length} />
+          {lists.length ? (
+            <ListGrid>
+              {lists.slice(0, 6).map((l) => (
+                <ListCard key={l.id} list={l} />
+              ))}
+            </ListGrid>
+          ) : isOwner ? (
+            <EmptyState
+              title="No lists yet"
+              action={
+                <ButtonLink href="/lists/new" size="sm">
+                  <ListPlus className="h-4 w-4" /> Create a list
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <p className="text-sm text-muted">No public lists.</p>
+          )}
+          {isOwner && lists.length ? (
+            <ButtonLink href="/lists/new" variant="secondary" size="sm" className="mt-6">
+              <ListPlus className="h-4 w-4" /> New list
+            </ButtonLink>
+          ) : null}
+        </section>
+
+        <section aria-labelledby="profile-reviews-heading" className="max-w-3xl">
+          <SectionHeader
+            id="profile-reviews-heading"
+            title="Recent Reviews"
+            href={isOwner ? "/reviews" : undefined}
+          />
+          {reviews.length ? (
+            reviews.map((r) => {
+              const g = getGameById(r.gameId);
+              return g ? <ReviewCard key={r.id} review={r} game={g} /> : null;
+            })
+          ) : (
+            <p className="text-sm text-muted">No written reviews yet.</p>
+          )}
+        </section>
+
+        <p className="text-xs text-faint">Member since {formatDate(profile.joinedAt)}</p>
+      </Container>
+    </div>
+  );
+}
+
+/** `/users/[username]` — anyone's public profile. */
+export function PublicProfile({ username }: { username: string }) {
+  const state = useAppState();
+  const status = useLoad(`user:${username.toLowerCase()}`, () => loaders.user(username));
+  const profile = getProfileByUsername(state, username);
+  if (status === "error") return <LoadError onRetry={() => void loaders.user(username)} />;
+  if (!profile && status !== "ready") return <PageSkeleton />;
+  if (!profile) {
+    return (
+      <Container className="py-16">
+        <EmptyState title="User not found" description={`There's no one called @${username} on Supabox.`} />
+      </Container>
+    );
+  }
+  return <ProfileContent profile={profile} />;
+}
+
+/** `/profile` — the signed-in user's own profile. */
+export function MyProfile() {
+  return <RequireUser message="Sign in to see your profile.">{(user) => <ProfileContent profile={user} />}</RequireUser>;
+}

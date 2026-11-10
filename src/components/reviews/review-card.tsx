@@ -1,0 +1,114 @@
+"use client";
+
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { GameCover } from "@/components/games/game-cover";
+import { Avatar } from "@/components/ui/avatar";
+import { buttonClasses } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/ui/confirm-button";
+import { Badge } from "@/components/ui/primitives";
+import { StarRating } from "@/components/ui/star-rating";
+import { actions } from "@/features/app/store";
+import { toast } from "@/features/app/ui-store";
+import { cn, formatDate } from "@/lib/utils";
+import type { Game, Profile, Review } from "@/types";
+
+export function ReviewBody({ review, clamp = false }: { review: Review; clamp?: boolean }) {
+  const [revealed, setRevealed] = useState(false);
+  if (!review.body) return <p className="text-sm text-faint italic">Rated without a written review.</p>;
+  if (review.containsSpoilers && !revealed) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-bg/40 px-3 py-2.5 text-sm">
+        <span className="text-muted">This review contains spoilers.</span>{" "}
+        <button
+          type="button"
+          onClick={() => setRevealed(true)}
+          className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
+        >
+          <Eye className="h-3.5 w-3.5" /> Show review
+        </button>
+      </div>
+    );
+  }
+  return (
+    <p className={cn("text-sm leading-relaxed whitespace-pre-line text-fg/90", clamp && "line-clamp-4")}>
+      {review.body}
+    </p>
+  );
+}
+
+/**
+ * A review with its game. `showAuthor` for social contexts; `editable` adds
+ * Edit/Delete for the owner (ownership is re-checked in the state layer).
+ */
+export function ReviewCard({
+  review,
+  game,
+  author,
+  showAuthor = false,
+  showGame = true,
+  editable = false,
+}: {
+  review: Review;
+  game: Game;
+  author?: Profile;
+  showAuthor?: boolean;
+  showGame?: boolean;
+  editable?: boolean;
+}) {
+  const edited = review.updatedAt !== review.createdAt;
+  return (
+    <article className="flex gap-4 border-b border-border py-5 last:border-b-0">
+      {showGame ? (
+        <Link href={`/games/${game.slug}`} className="w-16 shrink-0 sm:w-20" aria-label={game.title}>
+          <GameCover game={game} showTitle={false} />
+        </Link>
+      ) : null}
+      <div className="min-w-0 flex-1">
+        {showAuthor && author ? (
+          <Link
+            href={`/users/${author.username}`}
+            className="mb-2 inline-flex items-center gap-2 text-sm text-muted hover:text-fg"
+          >
+            <Avatar profile={author} size="xs" />
+            <span className="font-medium text-fg">{author.displayName}</span>
+            <span className="text-faint">@{author.username}</span>
+          </Link>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {showGame ? (
+            <Link href={`/games/${game.slug}`} className="font-semibold text-fg hover:text-accent">
+              {game.title}
+            </Link>
+          ) : null}
+          {review.rating !== null ? <StarRating value={review.rating} /> : null}
+          {review.containsSpoilers ? <Badge tone="warning">Spoilers</Badge> : null}
+        </div>
+        <p className="mt-1 text-xs text-faint">
+          <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
+          {edited ? <span> · edited {formatDate(review.updatedAt)}</span> : null}
+        </p>
+        <div className="mt-2.5">
+          <ReviewBody review={review} clamp={!editable} />
+        </div>
+        {editable ? (
+          <div className="mt-3 flex flex-wrap items-center gap-1">
+            <Link href={`/games/${game.slug}#your-review`} className={buttonClasses("ghost", "sm")}>
+              <Pencil className="h-3.5 w-3.5" /> Edit
+            </Link>
+            <ConfirmButton
+              prompt="Delete this review?"
+              onConfirm={async () => {
+                const r = await actions.deleteReview(review.id);
+                toast(r.ok ? "Review deleted" : r.error, r.ok ? "default" : "error");
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </ConfirmButton>
+          </div>
+        ) : null}
+      </div>
+    </article>
+  );
+}
