@@ -1,18 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { games } from "@/data/games";
+import { gameMayExist } from "@/lib/catalog/exists";
 import { isSupabaseConfigured, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
 /**
  * Game pages stream, so a missing game can't change the HTTP status from inside
  * the page. Unknown slugs are answered with a real 404 here instead.
- * (Phase 3: replace with a lookup against the catalog provider / games table.)
  */
-const KNOWN_GAME_SLUGS = new Set(games.map((g) => g.slug));
-
-function unknownGame(pathname: string): boolean {
+async function unknownGame(pathname: string): Promise<boolean> {
   const m = /^\/games\/([^/]+)\/?$/.exec(pathname);
-  return Boolean(m && !KNOWN_GAME_SLUGS.has(decodeURIComponent(m[1])));
+  if (!m) return false;
+  let slug: string;
+  try {
+    slug = decodeURIComponent(m[1]);
+  } catch {
+    return true;
+  }
+  return !(await gameMayExist(slug));
 }
 
 /**
@@ -21,7 +25,7 @@ function unknownGame(pathname: string): boolean {
  * Row Level Security in the database, not here.
  */
 export async function proxy(request: NextRequest) {
-  if (unknownGame(request.nextUrl.pathname)) {
+  if (await unknownGame(request.nextUrl.pathname)) {
     return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
   }
   let response = NextResponse.next({ request });

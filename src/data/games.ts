@@ -1,11 +1,12 @@
 import type { Game } from "@/types";
 
 /**
- * Fictional game catalog for the Phase 1 prototype.
+ * Fictional game catalog from the Phase 1 prototype. No longer shown in the app
+ * (real games come from IGDB); kept as fixtures for unit tests.
  * Every title, studio and description is invented. Cover art is generated
  * procedurally from the `cover` parameters (no third-party artwork).
  */
-type Seed = Omit<Game, "id" | "externalRef">;
+type Seed = Omit<Game, "id" | "externalRef" | "coverUrl" | "logoUrl" | "backgroundUrl" | "popularity">;
 
 const seeds: Seed[] = [
   {
@@ -305,5 +306,9 @@ export function mockGameId(n: number): string {
 export const games: Game[] = seeds.map((g, i) => ({
   ...g,
   id: mockGameId(i + 1),
+  coverUrl: null,
+  logoUrl: null,
+  backgroundUrl: null,
+  popularity: 0,
   externalRef: { provider: "mock", id: String(1000 + i) },
 }));

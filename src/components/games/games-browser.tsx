@@ -1,19 +1,19 @@
 "use client";
 
-import { SearchX, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { GameCard, GameGrid } from "@/components/games/game-card";
+import { AlertTriangle, SearchX, Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { GameCard, GameGrid, GameGridSkeleton } from "@/components/games/game-card";
+import { RegisterGames } from "@/components/games/register-games";
 import { Input } from "@/components/ui/form";
 import { EmptyState, SectionHeader } from "@/components/ui/primitives";
-import { getAllGames } from "@/lib/catalog";
-import { matchesQuery, sortByReleaseDesc } from "@/lib/catalog/provider";
+import { useGameSearch } from "@/hooks/use-game-search";
 import { pluralize } from "@/lib/utils";
 import type { Game } from "@/types";
 
 /**
  * Games discovery: search + Recently Released + Coming Soon.
- * Sections are server-rendered and passed in; search filters the (mock)
- * catalog on the client. Phase 3 moves search to the catalog provider API.
+ * Sections are server-rendered and passed in; search goes to /api/games/search
+ * (our catalog first, then IGDB).
  */
 export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: Game[] }) {
   const [query, setQuery] = useState("");
@@ -27,13 +27,13 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
     return () => window.removeEventListener("hashchange", focusIfHash);
   }, []);
 
-  const results = useMemo(
-    () => (query.trim() ? getAllGames().filter((g) => matchesQuery(g, query)).sort(sortByReleaseDesc) : null),
-    [query],
-  );
+  const search = useGameSearch(query);
+  const searching = query.trim().length >= 2;
+  const results = search.games;
 
   return (
     <>
+      <RegisterGames games={[...recent, ...upcoming]} />
       <div id="search" className="relative mb-10 max-w-xl scroll-mt-24">
         <label htmlFor="games-search" className="sr-only">
           Search games
@@ -46,7 +46,7 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-          placeholder="Search by title, studio, genre or platform"
+          placeholder="Search any game by title"
           className="h-12 rounded-xl pr-10 pl-10 text-base"
           autoComplete="off"
         />
@@ -65,10 +65,18 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
         ) : null}
       </div>
 
-      {results ? (
-        <section aria-labelledby="results-heading" aria-live="polite">
-          <SectionHeader id="results-heading" title={`Results for “${query.trim()}”`} count={results.length} />
-          {results.length ? (
+      {searching ? (
+        <section aria-labelledby="results-heading" aria-live="polite" aria-busy={search.status === "loading"}>
+          <SectionHeader
+            id="results-heading"
+            title={`Results for “${query.trim()}”`}
+            count={search.status === "done" ? results.length : undefined}
+          />
+          {search.status === "error" ? (
+            <EmptyState icon={<AlertTriangle />} title="Search is unavailable" description={search.error} />
+          ) : results.length === 0 && search.status !== "done" ? (
+            <GameGridSkeleton count={6} />
+          ) : results.length ? (
             <GameGrid>
               {results.map((g) => (
                 <GameCard key={g.id} game={g} />
@@ -78,7 +86,7 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
             <EmptyState
               icon={<SearchX />}
               title="No games found"
-              description="Try a different title, studio or genre. The prototype catalog has a small set of fictional games."
+              description="Try a different spelling, or the game's full title."
             />
           )}
         </section>
@@ -93,7 +101,10 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
                 ))}
               </GameGrid>
             ) : (
-              <EmptyState title="No recent releases" description="Check back soon." />
+              <EmptyState
+                title="No recent releases yet"
+                description="The game catalog hasn't been loaded. Run the catalog sync to import games."
+              />
             )}
           </section>
           {upcoming.length ? (

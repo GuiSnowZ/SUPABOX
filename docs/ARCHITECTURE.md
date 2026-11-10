@@ -42,7 +42,9 @@ docs/
 ## Data flow (Phase 2)
 
 ```
-Server components ──► lib/catalog (bundled mock catalog, same UUIDs as the games table)
+Server components ──► lib/catalog/server.ts (games table, cached; IGDB import on demand)
+Search            ──► /api/games/search → games table → IGDB fallback (stored)
+Catalog sync      ──► scripts/sync-catalog.mts → IGDB → games table (secret key)
 Client components ──► features/app/store.ts (useSyncExternalStore cache)
    reads:  loaders.* → db.ts queries → Supabase (RLS) → merged into the cache
    writes: actions.* → state.ts transition (validate + optimistic) → db.ts write → Supabase (RLS)

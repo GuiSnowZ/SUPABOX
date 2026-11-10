@@ -6,9 +6,11 @@
  * private data the user may not see is never returned.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { GAME_COLUMNS, type GameDbRow, toGame } from "@/lib/catalog/rows";
 import type {
   Activity,
   Follow,
+  Game,
   GameList,
   ID,
   PlaySession,
@@ -322,6 +324,17 @@ export async function loadList(db: SupabaseClient, listId: ID): Promise<Patch> {
   if (!row) return { lists: [] };
   const list = toList(row);
   return { lists: [list], profiles: await fetchProfiles(db, [list.userId]) };
+}
+
+/** Games by id (chunked to keep URLs short). */
+export async function loadGames(db: SupabaseClient, ids: ID[]): Promise<Game[]> {
+  const out: Game[] = [];
+  const unique = [...new Set(ids)];
+  for (let i = 0; i < unique.length; i += 100) {
+    const chunk = unique.slice(i, i + 100);
+    out.push(...unwrap<GameDbRow[]>(await db.from("games").select(GAME_COLUMNS).in("id", chunk)).map(toGame));
+  }
+  return out;
 }
 
 // ——— Writes ———

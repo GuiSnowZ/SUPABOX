@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isValidRating, summarizeRatings } from "@/lib/ratings";
 import { getReleaseStatus, matchesQuery } from "@/lib/catalog/provider";
-import { catalog } from "@/lib/catalog";
+import { isReleasedOn } from "@/lib/catalog/rows";
 import { games } from "@/data/games";
 import {
   getFollowingReviews,
@@ -54,12 +54,10 @@ describe("catalog", () => {
     expect(getReleaseStatus({ releaseDate: null }, "2026-11-10")).toBe("upcoming");
   });
 
-  it("returns recently released games newest first, released only", async () => {
-    const recent = await catalog.getRecentlyReleased(50);
-    expect(recent.length).toBeGreaterThan(0);
-    expect(recent.every((g) => g.releaseDate && g.releaseDate <= "2026-11-10")).toBe(true);
-    const dates = recent.map((g) => g.releaseDate!);
-    expect([...dates].sort().reverse()).toEqual(dates);
+  it("isReleasedOn matches the release status rule", () => {
+    expect(isReleasedOn({ releaseDate: "2026-11-10" }, "2026-11-10")).toBe(true);
+    expect(isReleasedOn({ releaseDate: "2026-11-11" }, "2026-11-10")).toBe(false);
+    expect(isReleasedOn({ releaseDate: null }, "2026-11-10")).toBe(false);
   });
 
   it("search ignores case, accents and ampersands", () => {

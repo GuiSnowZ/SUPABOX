@@ -13,7 +13,6 @@ import {
   getReviewsByUser,
 } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
-import { getGameById } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
 type Tab = "mine" | "following";
@@ -62,7 +61,7 @@ export function ReviewsView() {
             <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
               {reviews.length ? (
                 reviews.map((r) => {
-                  const game = getGameById(r.gameId);
+                  const game = state.games[r.gameId];
                   if (!game) return null;
                   return tab === "mine" ? (
                     <ReviewCard key={r.id} review={r} game={game} editable />

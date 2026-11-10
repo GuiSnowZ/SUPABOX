@@ -7,9 +7,8 @@ import { GameCover } from "@/components/games/game-cover";
 import { GamePicker } from "@/components/games/game-picker";
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "@/components/ui/primitives";
-import { actions } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
-import { getGameById } from "@/lib/catalog";
+import { actions, registerGames, useAppState } from "@/features/app/store";
 import { cn } from "@/lib/utils";
 import { type Game, type ID, MAX_FAVORITE_GAMES } from "@/types";
 
@@ -23,6 +22,7 @@ function Slot({ index }: { index: number }) {
 
 /** Five ordered favorite games. Owners can add, remove, replace and reorder. */
 export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: boolean }) {
+  const state = useAppState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ID[]>([]);
   const [replacing, setReplacing] = useState<number | null>(null);
@@ -51,6 +51,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
   }
 
   function pick(game: Game) {
+    registerGames([game]);
     setDraft((ids) => {
       if (replacing !== null) {
         const next = [...ids];
@@ -62,7 +63,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
     setReplacing(null);
   }
 
-  const shown = editing ? draft.map((id) => getGameById(id)).filter((g): g is Game => Boolean(g)) : games;
+  const shown = editing ? draft.map((id) => state.games[id]).filter((g): g is Game => Boolean(g)) : games;
 
   if (!isOwner && games.length === 0) return null;
 

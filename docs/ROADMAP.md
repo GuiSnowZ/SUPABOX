@@ -42,13 +42,19 @@ Mock data only. No Supabase, real auth or external APIs.
 - [ ] Avatar uploads (Supabase Storage)
 - [ ] Custom SMTP for auth emails (Supabase's built-in email is rate-limited)
 
-## Phase 3 — Real game data
+## Phase 3 — Real game data ✅ (awaiting review)
 - [x] Evaluate providers: IGDB recommended (see docs/GAME_DATA_PROVIDERS.md)
-- [ ] Twitch developer app credentials; IGDB commercial partnership (partner@igdb.com)
-- [ ] Provider adapter implementing `CatalogProvider`, plus a sync job into `games`
-- [ ] Real release dates for Recently Released; real search with pagination
-- [ ] Filters: genre, platform, release year
-- [ ] Licensed cover images through `next/image`
+- [x] Twitch developer app "Supabox" (Client ID + Secret, server-only)
+- [x] IGDB client (token caching, 4 req/s limit, retries) and mapping to our `games` rows (unit-tested)
+- [x] Migration: logo, background art, popularity, trigram title search, listing indexes; fictional games removed
+- [x] `npm run catalog:sync`: about 9.5k games (last 12 months, hyped upcoming, all titles with 20+ ratings) in about 1 minute
+- [x] Import on demand: any IGDB game becomes available when searched for or opened
+- [x] Search API (`/api/games/search`) with a per-IP limit; client game cache; real cover art, logos and backgrounds
+- [x] Recently Released and Coming Soon from real release dates
+- [x] IGDB attribution in the footer
+- [ ] Email partner@igdb.com for the commercial partnership (before launch)
+- [ ] Schedule the sync (daily cron, e.g. Vercel Cron or Supabase scheduled function)
+- [ ] Filters: genre, platform, release year; pagination for large result sets
 
 ## Phase 4 — Social experience
 - [ ] Privacy settings (private profiles), blocking, reporting and moderation basics
@@ -63,7 +69,8 @@ Mock data only. No Supabase, real auth or external APIs.
 - [ ] Plan the Expo mobile apps
 
 ## Known limitations
-- The game catalog is still 22 fictional games (seeded into the database); real data is Phase 3.
+- The catalog sync is manual (`npm run catalog:sync`) until it is scheduled.
+- Recently Released includes small indie titles; ranking or curation may need tuning.
 - The client loads bounded slices of community data (e.g. the 30 newest public lists, 200 reviews per game). Pagination comes with real catalog volumes.
 - Community ratings are computed from up to 200 loaded reviews per game; a database aggregate will replace this.
 - Search is client-side over the catalog and isn't reflected in the URL.

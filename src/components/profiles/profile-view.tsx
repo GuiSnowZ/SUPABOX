@@ -27,7 +27,6 @@ import {
 } from "@/features/app/selectors";
 import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
-import { getGameById } from "@/lib/catalog";
 import { formatDate, formatShortDate } from "@/lib/utils";
 import type { Game, Profile } from "@/types";
 import { FavoriteGames } from "./favorite-games";
@@ -116,7 +115,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
     ...getPlaySessions(state, profile.id).map((p) => p.gameId),
   ];
   const recentlyPlayed = [...new Set(recentIds)]
-    .map(getGameById)
+    .map((id) => state.games[id])
     .filter((g): g is Game => Boolean(g))
     .slice(0, 8);
 
@@ -178,7 +177,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
           {ratings.length ? (
             <ul className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-6">
               {ratings.map((r) => {
-                const g = getGameById(r.gameId);
+                const g = state.games[r.gameId];
                 if (!g) return null;
                 return (
                   <li key={r.id}>
@@ -245,7 +244,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
           />
           {reviews.length ? (
             reviews.map((r) => {
-              const g = getGameById(r.gameId);
+              const g = state.games[r.gameId];
               return g ? <ReviewCard key={r.id} review={r} game={g} /> : null;
             })
           ) : (

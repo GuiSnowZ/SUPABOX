@@ -14,8 +14,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useSyncExternalStore } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Follow, GameList, ID, PlaySession, Profile, Review, UserGame } from "@/types";
-import { friendlyError, loadBootstrap, loadGame, loadList, loadUser, type Patch, write } from "./db";
+import type { Follow, Game, GameList, ID, PlaySession, Profile, Review, UserGame } from "@/types";
+import { friendlyError, loadBootstrap, loadGame, loadGames, loadList, loadUser, type Patch, write } from "./db";
 import * as t from "./state";
 import { type AppState, createEmptyState, type LoadStatus, PrototypeError } from "./state";
 
@@ -76,6 +76,34 @@ function merge(state: AppState, patch: Patch, scopeUserId?: ID): AppState {
   };
 }
 
+/** Add catalog games we already have (e.g. from a server-rendered page or search). */
+export function registerGames(games: Game[]) {
+  if (!games.length) return;
+  const s = get();
+  if (games.every((g) => s.games[g.id] === g)) return;
+  const next = { ...s.games };
+  for (const g of games) next[g.id] = g;
+  commit({ ...s, games: next });
+}
+
+/** Ids of games referenced by cached rows that aren't in the game cache yet. */
+function missingGameIds(s: AppState): ID[] {
+  const ids = new Set<ID>();
+  for (const u of s.userGames) ids.add(u.gameId);
+  for (const r of s.reviews) ids.add(r.gameId);
+  for (const p of s.playSessions) ids.add(p.gameId);
+  for (const a of s.activities) ids.add(a.gameId);
+  for (const l of s.lists) for (const i of l.items) ids.add(i.gameId);
+  for (const favs of Object.values(s.favorites)) for (const id of favs) ids.add(id);
+  return [...ids].filter((id) => !s.games[id]);
+}
+
+async function fillMissingGames(db: SupabaseClient) {
+  const missing = missingGameIds(get());
+  if (!missing.length) return;
+  registerGames(await loadGames(db, missing));
+}
+
 function setLoad(key: string, status: LoadStatus) {
   commit({ ...get(), loads: { ...get().loads, [key]: status } });
 }
@@ -124,6 +152,8 @@ function load(key: string, fetcher: (db: SupabaseClient) => Promise<Applier>, fo
       const apply = await fetcher(db);
       if ((version === writeVersion && pendingWrites === 0) || attempt >= 3) {
         commit(apply(get()));
+        // Fetch the games those rows point at before reporting "ready", so pages don't flash empty cards.
+        await fillMissingGames(db);
         return;
       }
       // A write happened while fetching: this result may be stale. Fetch again.
@@ -200,7 +230,7 @@ export function startStore() {
     if (s.authReady && s.currentUserId === userId) return;
     // Defer: Supabase recommends not awaiting other calls inside this callback.
     setTimeout(() => {
-      const fresh = userId === s.currentUserId ? get() : { ...createEmptyState(), loads: {} };
+      const fresh = userId === s.currentUserId ? get() : { ...createEmptyState(), games: get().games };
       commit({ ...fresh, currentUserId: userId, authReady: true });
       void loaders.bootstrap(true);
     }, 0);

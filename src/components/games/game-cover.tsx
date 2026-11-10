@@ -1,13 +1,30 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { CoverMotif, Game } from "@/types";
+import type { CoverArt, CoverMotif, Game } from "@/types";
 
 /**
- * Procedurally generated cover art (prototype).
- * Original SVG art built from each game's palette + motif, so the prototype
- * uses no third-party artwork. Phase 3 swaps this for licensed provider
- * images via next/image while keeping the same 3:4 frame.
+ * Game cover in a fixed 3:4 frame.
+ * Shows the licensed cover image from the catalog (IGDB) when available;
+ * otherwise an original generated placeholder derived from the game's slug.
  */
+const PALETTES: Array<Omit<CoverArt, "motif">> = [
+  { from: "#1d2b45", to: "#e8a24a", ink: "#fff3df" },
+  { from: "#0c0d10", to: "#4a1f2a", ink: "#e9d6d0" },
+  { from: "#16301f", to: "#9bc46a", ink: "#effbe2" },
+  { from: "#0d0b26", to: "#7a5cff", ink: "#ece8ff" },
+  { from: "#2a1033", to: "#c3417a", ink: "#ffe3f0" },
+  { from: "#0a1f3c", to: "#3ee8c9", ink: "#e9fffb" },
+  { from: "#3a3f44", to: "#d65a31", ink: "#f4efe9" },
+  { from: "#10263a", to: "#d9b45b", ink: "#fff6dc" },
+];
+const MOTIFS: CoverMotif[] = ["orb", "peaks", "grid", "waves", "shards", "rings", "stripes"];
+
+function placeholderArt(slug: string): CoverArt {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  return { ...PALETTES[h % PALETTES.length], motif: MOTIFS[(h >>> 8) % MOTIFS.length] };
+}
+
 function Motif({ motif, ink }: { motif: CoverMotif; ink: string }): ReactNode {
   switch (motif) {
     case "orb":
@@ -91,12 +108,31 @@ export function GameCover({
   className,
   showTitle = true,
 }: {
-  game: Pick<Game, "slug" | "title" | "cover">;
+  game: Pick<Game, "slug" | "title" | "cover" | "coverUrl">;
   className?: string;
-  /** Hide the printed title when the cover is very small. */
+  /** Hide the printed title when the cover is very small (placeholder art only). */
   showTitle?: boolean;
 }) {
-  const { from, to, ink, motif } = game.cover;
+  if (game.coverUrl) {
+    return (
+      <div
+        className={cn(
+          "relative aspect-[3/4] w-full overflow-hidden rounded-[var(--radius-cover)] bg-surface ring-1 ring-white/8",
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- IGDB serves pre-sized, CDN-cached images */}
+        <img
+          src={game.coverUrl}
+          alt={`${game.title} cover art`}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+  const { from, to, ink, motif } = game.cover ?? placeholderArt(game.slug);
   const gid = `cover-${game.slug}`;
   const titleSize = game.title.length > 18 ? 24 : game.title.length > 11 ? 30 : 36;
   return (

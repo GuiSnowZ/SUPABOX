@@ -2,17 +2,21 @@
 
 **Your games. Your story.** A social diary for video games. Track what you play, rate and review games, build lists and see what your friends are playing.
 
-> **Status: Phase 2 — accounts and persistent data.** Sign-up, sign-in, libraries, wishlists, reviews, diary, lists, favorites and follows are saved in Supabase (PostgreSQL with Row Level Security). The game catalog is still a fictional placeholder until Phase 3.
+> **Status: Phase 3 — real game catalog.** Accounts and all user data are saved in Supabase (PostgreSQL with Row Level Security). Game data, covers and logos come from [IGDB](https://www.igdb.com): about 9.5k games are synced, and any other game is imported on demand.
 
 ## Run it locally
 
 Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supabase project.
 
 1. `npm install`
-2. Copy `.env.example` to `.env.local` and fill in your project's URL and **publishable** key (Supabase → Settings → API Keys). Never use the secret/service-role key in the app.
+2. Copy `.env.example` to `.env.local` and fill in:
+   - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase → Settings → API Keys)
+   - `SUPABASE_SECRET_KEY`: **server only**, used for catalog writes
+   - `IGDB_CLIENT_ID` and `IGDB_CLIENT_SECRET` from a Twitch developer app (dev.twitch.tv/console)
 3. Set up the database once: in Supabase → **SQL Editor**, run the files in `supabase/migrations/` in order (or use the Supabase CLI: `supabase db push`).
 4. Supabase → **Authentication → URL Configuration**: Site URL `http://localhost:3000`, and add `http://localhost:3000/**` to Redirect URLs.
-5. `npm run dev` and open <http://localhost:3000>.
+5. Load the game catalog: `npm run catalog:sync` (about 1 minute).
+6. `npm run dev` and open <http://localhost:3000>.
 
 ## Scripts
 
@@ -24,7 +28,7 @@ Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supaba
 | `npm run lint` | ESLint |
 | `npm test` | Vitest unit tests |
 | `npm run test:db` | Applies the migrations to an in-memory Postgres (PGlite) and checks constraints, triggers and RLS |
-| `npm run db:seed-sql` | Regenerates the catalog seed migration from `src/data/games.ts` |
+| `npm run catalog:sync` | Imports and refreshes games from IGDB (`-- --quick` for one page per set) |
 | `npm run check` | All of the above, in order |
 
 ## Main routes

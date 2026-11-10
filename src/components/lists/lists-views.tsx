@@ -125,7 +125,7 @@ export function ListDetail({ id }: { id: string }) {
   }
 
   const author = getProfileById(state, list.userId);
-  const games = getListGames(list);
+  const games = getListGames(state, list);
   const isOwner = list.userId === state.currentUserId;
 
   return (

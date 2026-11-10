@@ -2,7 +2,7 @@
 
 import { Bookmark, BookmarkCheck, Check } from "lucide-react";
 import { getUserGame } from "@/features/app/selectors";
-import { actions, useAppState } from "@/features/app/store";
+import { actions, registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { STATUS_LABEL } from "@/lib/library";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ export function WishlistButton({
   variant = "overlay",
   className,
 }: {
-  game: Pick<Game, "id" | "title">;
+  game: Game;
   variant?: "overlay" | "full";
   className?: string;
 }) {
@@ -37,6 +37,7 @@ export function WishlistButton({
       toast(`${game.title} is already in your library as ${STATUS_LABEL[otherStatus]}.`);
       return;
     }
+    registerGames([game]);
     const result = await actions.toggleWishlist(game.id);
     if (!result.ok) toast(result.error, "error");
     else toast(wishlisted ? `Removed ${game.title} from your wishlist` : `Added ${game.title} to your wishlist`);

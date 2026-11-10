@@ -49,3 +49,12 @@ Clients have no insert policy on `activities`. Triggers on `user_games` and `rev
 
 ### D-016 — Mock catalog kept in the bundle with stable UUIDs (2026-11-10)
 The fictional games are seeded into `games` with fixed UUIDs that match `src/data/games.ts`. That lets server components keep rendering game pages statically from the bundled data until the Phase 3 provider sync.
+
+### D-017 — IGDB catalog: curated base plus import on demand (2026-11-10)
+IGDB has about 284k games with covers. Storing all of them would approach the Supabase free-tier database limit and add little value. Instead we sync a base of about 9.5k games (last year's releases, hyped upcoming games, every game with 20+ ratings), and import any other game the first time someone searches for it or opens its page. IGDB's terms allow and prefer storing data locally.
+
+### D-018 — Catalog writes use the Supabase secret key, server-side only (2026-11-10)
+`games` still has no client write policies. The sync script and server-side imports use `SUPABASE_SECRET_KEY`, which is read only in `lib/supabase/admin.ts` (marked `server-only`) and in `scripts/`. It never gets a `NEXT_PUBLIC_` prefix and is never sent to browsers.
+
+### D-019 — Images served directly from IGDB's CDN (2026-11-10)
+Covers, logos and artwork use IGDB's pre-sized image URLs in plain `<img>` tags with lazy loading. Proxying them through Next's image optimizer would add cost (Vercel image quotas) for no visual gain. We may revisit this if we need our own caching or image formats.

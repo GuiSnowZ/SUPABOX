@@ -10,51 +10,53 @@ import {
   GameReviews,
 } from "@/components/games/game-user-panel";
 import { Badge, Container } from "@/components/ui/primitives";
-import { catalog, isReleased } from "@/lib/catalog";
+import { RegisterGames } from "@/components/games/register-games";
+import { isReleasedOn, todayIso } from "@/lib/catalog/rows";
+import { resolveGameBySlug } from "@/lib/catalog/server";
 import type { Game } from "@/types";
 import { formatReleaseDate } from "@/lib/utils";
 
-export async function generateStaticParams() {
-  const games = await catalog.listGames();
-  return games.map((g) => ({ slug: g.slug }));
-}
-
 export async function generateMetadata({ params }: PageProps<"/games/[slug]">): Promise<Metadata> {
-  const game = await catalog.getGameBySlug((await params).slug);
+  const game = await resolveGameBySlug((await params).slug);
   if (!game) return { title: "Game not found" };
   return {
     title: game.title,
     description: game.summary,
-    openGraph: { title: `${game.title} on Supabox`, description: game.summary, type: "website" },
+    openGraph: {
+      title: `${game.title} on Supabox`,
+      description: game.summary,
+      type: "website",
+      images: game.coverUrl ? [{ url: game.coverUrl }] : undefined,
+    },
   };
 }
 
 /**
- * Unknown slugs must 404 before streaming starts, so the slug is checked here
- * rather than inside a Suspense boundary. Every known game is prerendered by
- * generateStaticParams, so this never blocks a real game page.
+ * Game pages render on request (any of IGDB's games can be opened, and new ones
+ * are imported on the fly). Unknown slugs get their 404 status from the proxy.
  */
 export const instant = false;
 
 export default async function GamePage({ params }: PageProps<"/games/[slug]">) {
-  const game = await catalog.getGameBySlug((await params).slug);
+  const game = await resolveGameBySlug((await params).slug);
   if (!game) notFound();
   return <GameDetails game={game} />;
 }
 
 function GameDetails({ game }: { game: Game }) {
-  const released = isReleased(game);
+  const released = isReleasedOn(game, todayIso());
 
   return (
     <div className="relative">
-      {/* Soft colour wash from the cover palette */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[420px] opacity-35"
-        style={{
-          background: `radial-gradient(80% 100% at 50% 0%, ${game.cover.to}55, transparent 70%)`,
-        }}
-      />
+      <RegisterGames games={[game]} />
+      {/* Hero artwork, faded into the page background */}
+      {game.backgroundUrl ? (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[440px] overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- IGDB serves pre-sized images */}
+          <img src={game.backgroundUrl} alt="" className="h-full w-full object-cover opacity-30" />
+          <div className="absolute inset-0 bg-gradient-to-b from-bg/40 via-bg/70 to-bg" />
+        </div>
+      ) : null}
       <Container className="relative pt-6">
         <Link href="/games" className="inline-flex items-center gap-1 text-sm text-muted hover:text-fg">
           <ChevronLeft className="h-4 w-4" /> Games
@@ -75,14 +77,23 @@ function GameDetails({ game }: { game: Game }) {
                 <Badge key={g}>{g}</Badge>
               ))}
             </div>
+            {game.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- IGDB serves pre-sized images
+              <img src={game.logoUrl} alt="" aria-hidden className="mt-4 max-h-20 max-w-[280px] object-contain object-left" />
+            ) : null}
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{game.title}</h1>
             <p className="mt-2 text-muted">
               <time dateTime={game.releaseDate ?? undefined}>{formatReleaseDate(game.releaseDate)}</time>
               <span className="text-faint"> · </span>
               by <span className="text-fg">{game.developer}</span>
             </p>
-            <p className="mt-6 text-lg leading-relaxed text-fg/90">{game.summary}</p>
-            <p className="mt-4 leading-relaxed text-muted">{game.description}</p>
+            {game.description && game.description !== game.summary ? (
+              <p className="mt-6 leading-relaxed whitespace-pre-line text-fg/85">{game.description}</p>
+            ) : game.summary ? (
+              <p className="mt-6 text-lg leading-relaxed text-fg/90">{game.summary}</p>
+            ) : (
+              <p className="mt-6 text-muted">No description yet.</p>
+            )}
 
             <dl className="mt-8 grid grid-cols-1 gap-x-8 gap-y-4 border-t border-border pt-6 text-sm sm:grid-cols-2">
               <div>

@@ -9,15 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/primitives";
 import { MAX_LIST_DESCRIPTION, MAX_LIST_TITLE } from "@/features/app/state";
-import { actions } from "@/features/app/store";
+import { actions, registerGames, useAppState } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
-import { getGameById } from "@/lib/catalog";
 import { cn, releaseYear } from "@/lib/utils";
 import type { GameList, ID, ListVisibility } from "@/types";
 
 /** Create or edit a list. Any catalog game can be added — not only library games. */
 export function ListEditor({ existing }: { existing?: GameList }) {
   const router = useRouter();
+  const state = useAppState();
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
   const [visibility, setVisibility] = useState<ListVisibility>(existing?.visibility ?? "public");
@@ -119,14 +119,20 @@ export function ListEditor({ existing }: { existing?: GameList }) {
         <p className="mb-1.5 text-sm font-medium">
           Games <span className="text-faint">({gameIds.length})</span>
         </p>
-        <GamePicker onPick={(g) => setGameIds((ids) => (ids.includes(g.id) ? ids : [...ids, g.id]))} excludeIds={gameIds} />
+        <GamePicker
+          onPick={(g) => {
+            registerGames([g]);
+            setGameIds((ids) => (ids.includes(g.id) ? ids : [...ids, g.id]));
+          }}
+          excludeIds={gameIds}
+        />
         <Card className="mt-3">
           {gameIds.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-muted">Search above to add games to your list.</p>
           ) : (
             <ol className="divide-y divide-border">
               {gameIds.map((id, i) => {
-                const g = getGameById(id);
+                const g = state.games[id];
                 if (!g) return null;
                 return (
                   <li key={id} className="flex items-center gap-3 px-3 py-2">

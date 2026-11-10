@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { GamesBrowser } from "@/components/games/games-browser";
 import { Container, PageHeader } from "@/components/ui/primitives";
-import { catalog } from "@/lib/catalog";
+import { getRecentlyReleased, getUpcoming } from "@/lib/catalog/server";
 
 export const metadata: Metadata = {
   title: "Games",
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GamesPage() {
-  const [recent, upcoming] = await Promise.all([catalog.getRecentlyReleased(18), catalog.getUpcoming(6)]);
+  const [recent, upcoming] = await Promise.all([getRecentlyReleased(18), getUpcoming(6)]);
   return (
     <Container>
       <PageHeader

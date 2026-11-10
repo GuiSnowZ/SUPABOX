@@ -7,9 +7,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { citext } from "@electric-sql/pglite/contrib/citext";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 
 const migDir = fileURLToPath(new URL("../migrations", import.meta.url));
-const db = new PGlite({ extensions: { citext } });
+const db = new PGlite({ extensions: { citext, pg_trgm } });
 
 await db.exec(`
   create schema auth; create schema extensions;
@@ -26,6 +27,16 @@ for (const f of readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort()) {
 }
 // Supabase grants table privileges to API roles by default; RLS does the filtering.
 await db.exec(`grant select, insert, update, delete on all tables in schema public to anon, authenticated, service_role;`);
+
+// The mock catalog is removed by the real-catalog migration; tests use their own games.
+const mockLeft = (await db.query("select count(*)::int n from public.games")).rows[0].n;
+for (let i = 1; i <= 7; i++) {
+  const id = `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+  await db.query(
+    "insert into public.games (id, slug, title, provider, provider_id, popularity) values ($1, $2, $3, 'igdb', $4, $5)",
+    [id, `test-game--${i}`, `Test Game ${i}`, String(9000 + i), i],
+  );
+}
 
 let failures = 0;
 const ok = (name, cond) => { console.log(`${cond ? "PASS" : "FAIL"}  ${name}`); if (!cond) failures++; };
@@ -49,7 +60,10 @@ ok("username lower-cased", profs.some((p) => p.username === "alice_1" && p.displ
 ok("invalid username falls back to player_*", profs.some((p) => p.username.startsWith("player_")));
 ok("taken username (any case) is unavailable", (await as(null, "select public.is_username_available('ALICE_1') v")).rows[0].v === false);
 ok("free username is available", (await as(null, "select public.is_username_available('zed') v")).rows[0].v === true);
-ok("catalog seeded with 22 games", (await db.query("select count(*)::int n from public.games")).rows[0].n === 22);
+ok("mock catalog removed by migration", mockLeft === 0);
+ok("IGDB-style slugs with double dashes are allowed", (await db.query("select count(*)::int n from public.games where slug like '%--%'")).rows[0].n === 7);
+ok("bad slugs are rejected", await fails(null, "select 1") === false && (await (async () => { try { await db.query("insert into public.games (slug, title, provider, provider_id) values ('Bad Slug!', 'x', 'igdb', 'x1')"); return false; } catch { return true; } })()));
+ok("title search uses trigram index-compatible query", (await db.query("select count(*)::int n from public.games where lower(title) like '%game 3%'")).rows[0].n === 1);
 
 // Library / wishlist
 await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'want_to_play')", [A, G1]);

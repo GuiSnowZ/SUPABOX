@@ -11,7 +11,6 @@ import { Container, EmptyState, SectionHeader, Skeleton } from "@/components/ui/
 import { StarRating } from "@/components/ui/star-rating";
 import { getFeed, getProfileById } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
-import { getGameById } from "@/lib/catalog";
 import { timeAgo } from "@/lib/utils";
 import type { ActivityType, Game } from "@/types";
 
@@ -47,7 +46,7 @@ function ActivityFeed() {
     <ol className="space-y-1">
       {feed.map((a) => {
         const user = getProfileById(state, a.userId);
-        const game = getGameById(a.gameId);
+        const game = state.games[a.gameId];
         if (!user || !game) return null;
         const { text, icon: Icon } = VERB[a.type];
         const review = a.reviewId ? state.reviews.find((r) => r.id === a.reviewId) : undefined;
@@ -172,7 +171,7 @@ export function HomeView({ recent }: { recent: Game[] }) {
               <Skeleton className="h-40 w-full" />
             ) : recentReviews.length ? (
               recentReviews.map((r) => {
-                const g = getGameById(r.gameId);
+                const g = state.games[r.gameId];
                 return g ? (
                   <ReviewCard key={r.id} review={r} game={g} author={getProfileById(state, r.userId)} showAuthor />
                 ) : null;

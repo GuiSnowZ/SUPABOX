@@ -1,8 +1,11 @@
 /** Pure read helpers over AppState. These become SQL queries in Phase 2. */
-import { getGameById } from "@/lib/catalog";
 import { summarizeRatings } from "@/lib/ratings";
 import type { Game, GameList, ID, LibraryStatus, Profile, Review, UserGame } from "@/types";
 import { type AppState, canViewList } from "./state";
+
+export function getGame(state: AppState, id: ID): Game | undefined {
+  return state.games[id];
+}
 
 export function getProfileById(state: AppState, id: ID): Profile | undefined {
   return state.profiles.find((p) => p.id === id);
@@ -30,7 +33,7 @@ export interface LibraryEntry {
 export function getLibrary(state: AppState, userId: ID, status?: LibraryStatus): LibraryEntry[] {
   return state.userGames
     .filter((u) => u.userId === userId && (!status || u.status === status))
-    .map((entry) => ({ entry, game: getGameById(entry.gameId) }))
+    .map((entry) => ({ entry, game: state.games[entry.gameId] }))
     .filter((x): x is LibraryEntry => Boolean(x.game));
 }
 
@@ -94,7 +97,7 @@ export function getFollowingReviews(state: AppState, userId: ID): Review[] {
 }
 
 export function getFavoriteGames(state: AppState, userId: ID): Game[] {
-  return (state.favorites[userId] ?? []).map(getGameById).filter((g): g is Game => Boolean(g));
+  return (state.favorites[userId] ?? []).map((id) => state.games[id]).filter((g): g is Game => Boolean(g));
 }
 
 export function getListsByUser(state: AppState, userId: ID, viewerId: ID | null): GameList[] {
@@ -109,10 +112,10 @@ export function getPublicLists(state: AppState): GameList[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function getListGames(list: GameList): Game[] {
+export function getListGames(state: AppState, list: GameList): Game[] {
   return [...list.items]
     .sort((a, b) => a.position - b.position)
-    .map((i) => getGameById(i.gameId))
+    .map((i) => state.games[i.gameId])
     .filter((g): g is Game => Boolean(g));
 }
 

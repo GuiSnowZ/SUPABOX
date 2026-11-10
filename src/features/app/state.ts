@@ -7,6 +7,7 @@
  * enforced again by constraints and Row Level Security. These functions are
  * pure, so they are unit-tested without a database.
  */
+import { games as mockGames } from "@/data/games";
 import * as seed from "@/data/social";
 import { isValidRating } from "@/lib/ratings";
 import { createId } from "@/lib/utils";
@@ -14,6 +15,7 @@ import {
   type Activity,
   type ActivityType,
   type Follow,
+  type Game,
   type GameList,
   type ID,
   type LibraryStatus,
@@ -36,6 +38,8 @@ export interface AppState {
   authReady: boolean;
   /** Load status per resource key, e.g. "bootstrap", "game:<id>", "user:<name>", "list:<id>". */
   loads: Record<string, LoadStatus>;
+  /** Catalog games referenced by anything loaded (library, reviews, lists, feed…), by id. */
+  games: Record<ID, Game>;
   profiles: Profile[];
   userGames: UserGame[];
   reviews: Review[];
@@ -55,6 +59,7 @@ export function createEmptyState(): AppState {
     currentUserId: null,
     authReady: false,
     loads: {},
+    games: {},
     profiles: [],
     userGames: [],
     reviews: [],
@@ -73,6 +78,7 @@ export function createDemoState(): AppState {
     currentUserId: seed.DEMO_USER_ID,
     authReady: true,
     loads: {},
+    games: Object.fromEntries(mockGames.map((g) => [g.id, g])),
     profiles: seed.profiles,
     userGames: seed.userGames,
     reviews: seed.reviews,

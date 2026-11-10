@@ -12,7 +12,8 @@ import type { GameList } from "@/types";
 
 /** Overlapping stack of the first few covers. */
 export function CoverStack({ list, max = 5 }: { list: GameList; max?: number }) {
-  const games = getListGames(list).slice(0, max);
+  const state = useAppState();
+  const games = getListGames(state, list).slice(0, max);
   return (
     <div className="flex">
       {Array.from({ length: max }, (_, i) => {

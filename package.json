@@ -10,8 +10,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:db && npm run build",
-    "db:seed-sql": "node scripts/generate-catalog-seed.mts",
-    "test:db": "node supabase/tests/schema.test.mjs"
+    "db:seed-sql": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-catalog-seed.mts",
+    "test:db": "node supabase/tests/schema.test.mjs",
+    "catalog:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sync-catalog.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

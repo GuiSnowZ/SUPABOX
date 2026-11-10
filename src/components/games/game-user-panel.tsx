@@ -19,7 +19,7 @@ import {
   getUserGame,
   getUserReview,
 } from "@/features/app/selectors";
-import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
+import { actions, loaders, registerGames, useAppState, useLoad } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { LIBRARY_STATUSES, SESSION_KIND_LABEL, STATUS_LABEL } from "@/lib/library";
 import { formatRating } from "@/lib/ratings";
@@ -68,6 +68,7 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
 
   async function setStatus(status: LibraryStatus | null) {
     if (!userId) return promptSignIn(`Sign in to add ${game.title} to your library.`);
+    registerGames([game]);
     const r = await actions.setLibraryStatus(game.id, status);
     if (!r.ok) return toast(r.error, "error");
     toast(status ? `Marked as ${STATUS_LABEL[status]}` : `Removed ${game.title} from your library`);

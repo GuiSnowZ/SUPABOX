@@ -1,10 +1,9 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { Input } from "@/components/ui/form";
-import { getAllGames } from "@/lib/catalog";
-import { matchesQuery, sortByReleaseDesc } from "@/lib/catalog/provider";
+import { useGameSearch } from "@/hooks/use-game-search";
 import { releaseYear } from "@/lib/utils";
 import type { Game, ID } from "@/types";
 import { GameCover } from "./game-cover";
@@ -25,16 +24,8 @@ export function GamePicker({
   const inputId = useId();
   const listId = useId();
   const excluded = useMemo(() => new Set(excludeIds), [excludeIds]);
-  const results = useMemo(
-    () =>
-      query.trim()
-        ? getAllGames()
-            .filter((g) => matchesQuery(g, query))
-            .sort(sortByReleaseDesc)
-            .slice(0, 8)
-        : [],
-    [query],
-  );
+  const search = useGameSearch(query);
+  const results = search.games.slice(0, 10);
 
   return (
     <div className="relative">
@@ -58,8 +49,20 @@ export function GamePicker({
           id={listId}
           className="animate-fade-in absolute z-20 mt-1.5 max-h-80 w-full overflow-auto rounded-xl border border-border bg-bg-subtle p-1 shadow-xl shadow-black/40"
         >
-          {results.length === 0 ? (
-            <li className="px-3 py-4 text-center text-sm text-muted">No games match “{query}”.</li>
+          {search.status === "error" ? (
+            <li className="px-3 py-4 text-center text-sm text-danger">{search.error}</li>
+          ) : results.length === 0 ? (
+            <li className="flex items-center justify-center gap-2 px-3 py-4 text-center text-sm text-muted">
+              {search.status === "done" ? (
+                <>No games match “{query}”.</>
+              ) : query.trim().length < 2 ? (
+                <>Keep typing…</>
+              ) : (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Searching…
+                </>
+              )}
+            </li>
           ) : (
             results.map((g) => {
               const added = excluded.has(g.id);
@@ -78,7 +81,8 @@ export function GamePicker({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-fg">{g.title}</span>
                       <span className="block text-xs text-faint">
-                        {releaseYear(g.releaseDate)} · {g.developer}
+                        {releaseYear(g.releaseDate)}
+                        {g.developer && !g.developer.startsWith("Unknown") ? ` · ${g.developer}` : ""}
                       </span>
                     </span>
                     <span className="text-xs text-muted">{added ? "Added" : <Plus className="h-4 w-4" />}</span>

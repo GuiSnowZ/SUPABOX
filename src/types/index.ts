@@ -10,15 +10,8 @@ export type ID = string;
 /** ISO 8601 date (YYYY-MM-DD) or timestamp string. */
 export type ISODate = string;
 
-export type Platform =
-  | "PC"
-  | "PlayStation 5"
-  | "Xbox Series X|S"
-  | "Nintendo Switch 2"
-  | "Nintendo Switch"
-  | "macOS"
-  | "iOS"
-  | "Android";
+/** Display name of a platform, e.g. "PC", "PlayStation 5", "Nintendo Switch 2". */
+export type Platform = string;
 
 export type CoverMotif = "orb" | "peaks" | "grid" | "waves" | "shards" | "rings" | "stripes";
 
@@ -32,7 +25,7 @@ export interface CoverArt {
 
 export interface Game {
   id: ID;
-  /** Human-readable, unique, stable URL segment. Editions get their own slug (e.g. `-definitive-edition`). */
+  /** Human-readable, unique, stable URL segment (from the catalog provider). */
   slug: string;
   title: string;
   /** null = date not announced (TBA). */
@@ -43,8 +36,17 @@ export interface Game {
   publisher: string;
   platforms: Platform[];
   genres: string[];
-  cover: CoverArt;
-  /** Identifier at the external catalog provider (IGDB etc.). Mock data uses `mock:<n>`. */
+  /** Licensed cover image (portrait). null → a generated placeholder cover is shown. */
+  coverUrl: string | null;
+  /** Transparent game logo, when the provider has one. */
+  logoUrl: string | null;
+  /** Wide artwork or screenshot for page backgrounds. */
+  backgroundUrl: string | null;
+  /** Provider popularity signal (ratings + hype), used for ranking. */
+  popularity: number;
+  /** Placeholder art parameters (fictional prototype games only). */
+  cover?: CoverArt;
+  /** Identifier at the external catalog provider (IGDB etc.). */
   externalRef: { provider: string; id: string };
 }
 
