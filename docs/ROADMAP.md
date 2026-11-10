@@ -53,7 +53,7 @@ Mock data only. No Supabase, real auth or external APIs.
 - [x] Recently Released and Coming Soon from real release dates
 - [x] IGDB attribution in the footer
 - [ ] Email partner@igdb.com for the commercial partnership (before launch)
-- [ ] Schedule the sync (daily cron, e.g. Vercel Cron or Supabase scheduled function)
+- [x] Daily catalog sync with GitHub Actions (`.github/workflows/catalog-sync.yml`, 06:00 UTC, plus a manual "Run workflow" button)
 - [ ] Filters: genre, platform, release year; pagination for large result sets
 
 ## Phase 4 — Social experience
@@ -69,7 +69,7 @@ Mock data only. No Supabase, real auth or external APIs.
 - [ ] Plan the Expo mobile apps
 
 ## Known limitations
-- The catalog sync is manual (`npm run catalog:sync`) until it is scheduled.
+- GitHub pauses scheduled workflows in repositories with no commits for 60 days; re-enable it from the Actions tab if that happens.
 - Recently Released includes small indie titles; ranking or curation may need tuning.
 - The client loads bounded slices of community data (e.g. the 30 newest public lists, 200 reviews per game). Pagination comes with real catalog volumes.
 - Community ratings are computed from up to 200 loaded reviews per game; a database aggregate will replace this.

@@ -28,7 +28,7 @@ Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supaba
 | `npm run lint` | ESLint |
 | `npm test` | Vitest unit tests |
 | `npm run test:db` | Applies the migrations to an in-memory Postgres (PGlite) and checks constraints, triggers and RLS |
-| `npm run catalog:sync` | Imports and refreshes games from IGDB (`-- --quick` for one page per set) |
+| `npm run catalog:sync` | Imports and refreshes games from IGDB (`-- --quick` for one page per set). Also runs daily on GitHub Actions. |
 | `npm run check` | All of the above, in order |
 
 ## Main routes
