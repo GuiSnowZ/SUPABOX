@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import Link from "next/link";
 import { SectionHeader } from "@/components/ui/primitives";
 import { MEDAL_TIERS, type MedalProgress, type MedalTier, medalProgress, TRACK_LABEL } from "@/lib/medals";
 import { cn } from "@/lib/utils";
@@ -79,23 +80,9 @@ export function Medals({ reviews, completed }: { reviews: number; completed: num
           <TrackCard key={p.track} p={p} />
         ))}
       </div>
-      <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-xs text-faint hover:text-fg">How medals work</summary>
-        <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-9">
-          {MEDAL_TIERS.map((t) => (
-            <li key={t.level} className="flex flex-col items-center text-center">
-              <MedalArt tier={t} size={40} />
-              <span className="mt-1 text-xs font-medium" style={{ color: t.color }}>
-                {t.name}
-              </span>
-              <span className="text-[11px] text-faint">{t.threshold}+</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs text-faint">
-          Medals are earned automatically: write reviews to climb as a Critic, finish games to climb as a Completionist.
-        </p>
-      </details>
+      <Link href="/medals" className="mt-3 inline-block text-xs text-faint hover:text-accent">
+        How medals work — see all nine tiers →
+      </Link>
     </section>
   );
 }

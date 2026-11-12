@@ -11,6 +11,9 @@ export function SiteFooter() {
             <LogoMark className="h-5 w-5" />
             <span>Supabox — Your games. Your story.</span>
           </span>
+          <Link href="/medals" className="hover:text-fg">
+            Medals
+          </Link>
           <Link href="/privacy" className="hover:text-fg">
             Privacy
           </Link>
