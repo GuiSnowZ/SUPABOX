@@ -18,7 +18,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/games/new-r
   return (
     <PagedGameList
       title="New Releases"
-      description="Released in the last three months, most popular first."
+      description="Released in the last three months. The biggest new launches come first."
       basePath="/games/new-releases"
       result={result}
     />

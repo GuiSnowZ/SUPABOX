@@ -55,3 +55,25 @@ export function todayIso(now = new Date()): string {
 export function isReleasedOn(game: Pick<Game, "releaseDate">, today: string): boolean {
   return game.releaseDate !== null && game.releaseDate <= today;
 }
+
+/**
+ * How "hot" a released game is right now: its popularity (player ratings +
+ * pre-release hype), halved for every RELEASE_BUZZ_HALF_LIFE_DAYS since launch.
+ * A fresh big release beats a bigger game from two months ago, but a tiny
+ * game released today does not beat a hit from last week.
+ */
+export const RELEASE_BUZZ_HALF_LIFE_DAYS = 21;
+
+export function releaseBuzz(game: Pick<Game, "releaseDate" | "popularity">, today: string): number {
+  if (!game.releaseDate) return 0;
+  const ageDays = Math.max(0, (Date.parse(today) - Date.parse(game.releaseDate)) / 86_400_000);
+  return game.popularity * 0.5 ** (ageDays / RELEASE_BUZZ_HALF_LIFE_DAYS);
+}
+
+/** Sort released games hottest first (ties: newest first). Returns a new array. */
+export function sortByReleaseBuzz<T extends Pick<Game, "releaseDate" | "popularity">>(games: T[], today: string): T[] {
+  return [...games].sort(
+    (a, b) =>
+      releaseBuzz(b, today) - releaseBuzz(a, today) || (b.releaseDate ?? "").localeCompare(a.releaseDate ?? ""),
+  );
+}

@@ -5,7 +5,7 @@ import { fetchGameRows, type GameRow, igdbSearchTerm, PLAYABLE_GAME_TYPES } from
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getPublicSupabase } from "@/lib/supabase/public";
 import type { Game } from "@/types";
-import { GAME_COLUMNS, type GameDbRow, todayIso, toGame } from "./rows";
+import { GAME_COLUMNS, type GameDbRow, sortByReleaseBuzz, todayIso, toGame } from "./rows";
 
 /**
  * Server-side game catalog. Reads come from our `games` table (public data);
@@ -27,33 +27,46 @@ function db() {
 
 const daysFromNow = (days: number) => todayIso(new Date(Date.now() + days * 86_400_000));
 
+/** Window for "new releases": released in the last N days. */
+const NEW_RELEASES_WINDOW_DAYS = 90;
+/** Safety cap on candidates ranked in memory (a 90-day window holds a few hundred). */
+const MAX_RELEASE_CANDIDATES = 1000;
+
 /**
- * The biggest releases of the last two months, most popular first
- * (popularity = IGDB player ratings + pre-release hype, refreshed by the sync).
+ * Released games of the last `days`, hottest first: popularity decays with
+ * age (see releaseBuzz), so this week's big launch sits above a bigger game
+ * from two months ago. Ranking happens here because it depends on today's date.
+ */
+async function rankedReleases(days: number): Promise<Game[]> {
+  const today = todayIso();
+  const { data, error } = await db()
+    .from("games")
+    .select(GAME_COLUMNS)
+    .lte("release_date", today)
+    .gte("release_date", daysFromNow(-days))
+    .gte("popularity", MIN_RECENT_POPULARITY)
+    .not("cover_url", "is", null)
+    .order("popularity", { ascending: false })
+    .limit(MAX_RELEASE_CANDIDATES);
+  if (error) throw new Error(error.message);
+  return sortByReleaseBuzz((data as GameDbRow[]).map(toGame), today);
+}
+
+/**
+ * The hottest releases right now (popularity = IGDB player ratings +
+ * pre-release hype, refreshed by the daily sync, decayed by age).
  * Falls back to a wider window when a quiet period has too few games.
  */
 export async function getRecentlyReleased(limit = 18): Promise<Game[]> {
   "use cache";
   cacheLife("hours");
   cacheTag("games");
-  const today = todayIso();
   let games: Game[] = [];
-  for (const window of [RECENT_WINDOW_DAYS, 120, 365]) {
-    const { data, error } = await db()
-      .from("games")
-      .select(GAME_COLUMNS)
-      .lte("release_date", today)
-      .gte("release_date", daysFromNow(-window))
-      .gte("popularity", MIN_RECENT_POPULARITY)
-      .not("cover_url", "is", null)
-      .order("popularity", { ascending: false })
-      .order("release_date", { ascending: false })
-      .limit(limit);
-    if (error) throw new Error(error.message);
-    games = (data as GameDbRow[]).map(toGame);
+  for (const window of [RECENT_WINDOW_DAYS, NEW_RELEASES_WINDOW_DAYS, 365]) {
+    games = await rankedReleases(window);
     if (games.length >= limit) break;
   }
-  return games;
+  return games.slice(0, limit);
 }
 
 /** The most anticipated games of the next six months, shown soonest first. */
@@ -120,21 +133,16 @@ async function pagedGames(
   return { games: (data as unknown as GameDbRow[]).map(toGame), page, total, pages: pagesFor(total) };
 }
 
-/** All new releases of the last 90 days, biggest first, one page at a time. */
+/** All new releases of the last 90 days, hottest first, one page at a time. */
 export async function getNewReleasesPage(pageNumber: number): Promise<GamePage> {
   "use cache";
   cacheLife("hours");
   cacheTag("games");
-  return pagedGames(pageNumber, (q) =>
-    q
-      .lte("release_date", todayIso())
-      .gte("release_date", daysFromNow(-90))
-      .gte("popularity", MIN_RECENT_POPULARITY)
-      .not("cover_url", "is", null)
-      .order("popularity", { ascending: false })
-      .order("release_date", { ascending: false })
-      .order("id", { ascending: true }),
-  );
+  const all = await rankedReleases(NEW_RELEASES_WINDOW_DAYS);
+  const page = clampPage(pageNumber);
+  const pages = Math.min(MAX_PAGES, Math.max(1, Math.ceil(all.length / PAGE_SIZE)));
+  const from = (page - 1) * PAGE_SIZE;
+  return { games: all.slice(from, from + PAGE_SIZE), page, pages, total: all.length };
 }
 
 /** Games releasing in the next 12 months, most anticipated first, one page at a time. */

@@ -26,11 +26,11 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 1 — Correções
 
-- [ ] **4. Ordem e jogos faltando na home**
+- [x] **4. Ordem e jogos faltando na home** — feito: lançamentos ordenados por "popularidade que cai pela metade a cada 21 dias"; nenhum jogo popular estava sendo escondido por falta de capa.
   - Diagnóstico: "Novos lançamentos" ordena só por popularidade, que soma número de avaliações e hype. Jogo recém-lançado ainda tem poucas avaliações, então perde para um jogo de meses atrás. Exemplo: Zelda: Ocarina of Time (05/11, popularidade 107) fica abaixo de Marvel's Wolverine (15/09, 342).
   - Correção: nota de destaque que dá peso à data (mais novo sobe) e ao hype de antes do lançamento.
   - Também: revisar os filtros que podem estar escondendo jogos (sem capa, hype mínimo, janela de dias) e a sincronização diária para jogos recém-anunciados.
-- [ ] **7. Capas gigantes no celular** na busca de favoritos: tamanho fixo e proporção correta das capas no modal, testado em telas pequenas.
+- [x] **7. Capas gigantes no celular** — feito: a largura pequena das capas na busca era sobrescrita pela largura cheia padrão; agora a classe mais específica vence em todo o site. na busca de favoritos: tamanho fixo e proporção correta das capas no modal, testado em telas pequenas.
 
 ## Fase 2 — Núcleo de jogo e perfil
 

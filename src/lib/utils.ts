@@ -1,6 +1,12 @@
-/** Join class names, skipping falsy values. */
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Join class names, skipping falsy values. Conflicting Tailwind classes are
+ * resolved in favour of the later one, so a caller's `w-8` overrides a
+ * component's default `w-full` (plain joining left that to CSS order).
+ */
 export function cn(...classes: Array<string | false | null | undefined>): string {
-  return classes.filter(Boolean).join(" ");
+  return twMerge(classes.filter(Boolean).join(" "));
 }
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
