@@ -25,9 +25,15 @@ function encode(canvas: HTMLCanvasElement, type: Encoded["type"], quality: numbe
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-async function toAvatarImage(file: File): Promise<Encoded> {
+export interface SquareCrop {
+  sx: number;
+  sy: number;
+  side: number;
+}
+
+async function toAvatarImage(file: File, crop?: SquareCrop): Promise<Encoded> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-  const [sx, sy, side] = centeredSquare(bitmap.width, bitmap.height);
+  const [sx, sy, side] = crop ? [crop.sx, crop.sy, crop.side] : centeredSquare(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = AVATAR_SIZE;
   const ctx = canvas.getContext("2d");
@@ -57,14 +63,22 @@ function currentAvatarPath(userId: string): string | null {
   return url && url.includes(marker) ? url.slice(url.indexOf(marker) + marker.length) : null;
 }
 
-export async function uploadAvatar(file: File): Promise<ActionResult> {
+/** Validate a chosen file before showing the crop editor. Returns an error message, or null if it's fine. */
+export function checkAvatarFile(file: File): string | null {
+  if (!file.type.startsWith("image/")) return "Choose an image file (JPG, PNG, WebP…).";
+  if (file.size > MAX_AVATAR_INPUT_BYTES) return "That image is over 15 MB. Choose a smaller one.";
+  return null;
+}
+
+/** Upload a profile picture; `crop` is the square chosen in the editor (defaults to the centre). */
+export async function uploadAvatar(file: File, crop?: SquareCrop): Promise<ActionResult> {
   const userId = getAppState().currentUserId;
   if (!userId) return { ok: false, error: "You need to sign in first." };
-  if (!file.type.startsWith("image/")) return { ok: false, error: "Choose an image file (JPG, PNG, WebP…)." };
-  if (file.size > MAX_AVATAR_INPUT_BYTES) return { ok: false, error: "That image is over 15 MB. Choose a smaller one." };
+  const invalid = checkAvatarFile(file);
+  if (invalid) return { ok: false, error: invalid };
   let image: Encoded;
   try {
-    image = await toAvatarImage(file);
+    image = await toAvatarImage(file, crop);
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Couldn't read that image." };
   }

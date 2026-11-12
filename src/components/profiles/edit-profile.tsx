@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Textarea } from "@/components/ui/form";
 import { Container, PageHeader, SectionHeader } from "@/components/ui/primitives";
 import { signOut } from "@/features/app/auth";
-import { removeAvatar, uploadAvatar } from "@/features/app/avatar";
+import { checkAvatarFile, removeAvatar, type SquareCrop, uploadAvatar } from "@/features/app/avatar";
+import { AvatarCropper } from "./avatar-cropper";
 import { actions } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import type { Profile } from "@/types";
@@ -18,19 +19,34 @@ import type { Profile } from "@/types";
 function AvatarPicker({ user }: { user: Profile }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<"upload" | "remove" | null>(null);
+  const [chosen, setChosen] = useState<{ file: File; url: string } | null>(null);
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    setPending("upload");
-    const r = await uploadAvatar(file);
-    setPending(null);
+  function closeEditor() {
+    if (chosen) URL.revokeObjectURL(chosen.url);
+    setChosen(null);
+  }
+
+  function onFile(file: File | undefined) {
     if (inputRef.current) inputRef.current.value = "";
+    if (!file) return;
+    const invalid = checkAvatarFile(file);
+    if (invalid) return toast(invalid, "error");
+    if (chosen) URL.revokeObjectURL(chosen.url);
+    setChosen({ file, url: URL.createObjectURL(file) }); // opens the crop editor
+  }
+
+  async function save(crop: SquareCrop) {
+    if (!chosen) return;
+    setPending("upload");
+    const r = await uploadAvatar(chosen.file, crop);
+    setPending(null);
+    if (r.ok) closeEditor();
     toast(r.ok ? "Profile picture updated" : r.error, r.ok ? "default" : "error");
   }
 
   return (
     <div className="flex items-center gap-4">
-      <div className="relative">
+      <div className="relative shrink-0">
         <Avatar profile={user} size="lg" />
         {pending ? (
           <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
@@ -66,8 +82,11 @@ function AvatarPicker({ user }: { user: Profile }) {
             Remove
           </Button>
         ) : null}
-        <p className="w-full text-xs text-faint">JPG, PNG or WebP. It&apos;s cropped to a square.</p>
+        <p className="w-full text-xs text-faint">JPG, PNG or WebP. You can adjust the framing next.</p>
       </div>
+      {chosen ? (
+        <AvatarCropper key={chosen.url} url={chosen.url} saving={pending === "upload"} onCancel={closeEditor} onConfirm={save} />
+      ) : null}
     </div>
   );
 }
