@@ -109,12 +109,16 @@ export interface Review {
   containsSpoilers: boolean;
   createdAt: ISODate;
   updatedAt: ISODate;
+  likeCount?: number;
+  commentCount?: number;
 }
 
 export interface Follow {
   followerId: ID;
   followingId: ID;
   createdAt: ISODate;
+  /** Per-friend bell: notify the follower about this person's activity (default on). */
+  notify?: boolean;
 }
 
 export type ListVisibility = "public" | "private";
@@ -137,6 +141,8 @@ export interface GameList {
   items: ListItem[];
   createdAt: ISODate;
   updatedAt: ISODate;
+  likeCount?: number;
+  commentCount?: number;
 }
 
 export type ActivityType = "added_to_library" | "started_playing" | "completed" | "published_review";

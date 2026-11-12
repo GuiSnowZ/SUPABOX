@@ -15,6 +15,8 @@ import {
   deleteList,
   deleteReview,
   setFavorites,
+  setFollowNotify,
+  toggleLike,
   setLibraryStatus,
   signOut,
   toggleFollow,
@@ -213,5 +215,29 @@ describe("follows", () => {
     s = toggleFollow(s, "u6", NOW);
     expect(s.follows.some((f) => f.followerId === "u1" && f.followingId === "u6")).toBe(false);
     expect(() => toggleFollow(s, "u1")).toThrow();
+  });
+});
+
+describe("likes", () => {
+  it("toggles a like and keeps the count in step", () => {
+    let s = createDemoState();
+    const review = s.reviews.find((r) => r.userId !== "u1")!;
+    const before = review.likeCount ?? 0;
+    s = toggleLike(s, "review", review.id);
+    expect(s.liked.reviews).toContain(review.id);
+    expect(s.reviews.find((r) => r.id === review.id)!.likeCount).toBe(before + 1);
+    s = toggleLike(s, "review", review.id);
+    expect(s.liked.reviews).not.toContain(review.id);
+    expect(s.reviews.find((r) => r.id === review.id)!.likeCount).toBe(before);
+  });
+});
+
+describe("per-friend bell", () => {
+  it("only applies to people you follow", () => {
+    let s = createDemoState();
+    const followed = s.follows.find((f) => f.followerId === "u1")!.followingId;
+    s = setFollowNotify(s, followed, false);
+    expect(s.follows.find((f) => f.followerId === "u1" && f.followingId === followed)!.notify).toBe(false);
+    expect(() => setFollowNotify(s, "u1", false)).toThrow(/Follow them first/);
   });
 });

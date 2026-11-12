@@ -48,6 +48,8 @@ export interface AppState {
   favorites: Record<ID, ID[]>;
   follows: Follow[];
   activities: Activity[];
+  /** Reviews and lists the signed-in user has liked. */
+  liked: { reviews: ID[]; lists: ID[] };
 }
 
 export class PrototypeError extends Error {}
@@ -68,6 +70,7 @@ export function createEmptyState(): AppState {
     favorites: {},
     follows: [],
     activities: [],
+    liked: { reviews: [], lists: [] },
   };
 }
 
@@ -87,6 +90,7 @@ export function createDemoState(): AppState {
     favorites: seed.favoriteGames,
     follows: seed.follows,
     activities: seed.activities,
+    liked: { reviews: [] as string[], lists: [] as string[] },
   });
 }
 
@@ -120,7 +124,7 @@ const STATUS_ACTIVITY: Record<LibraryStatus, ActivityType | null> = {
 // ——— Auth ———
 
 export function signOut(state: AppState): AppState {
-  return { ...state, currentUserId: null };
+  return { ...state, currentUserId: null, liked: { reviews: [], lists: [] } };
 }
 
 // ——— Library & wishlist ———
@@ -386,7 +390,41 @@ export function setFavorites(state: AppState, gameIds: ID[]): AppState {
   return { ...state, favorites: { ...state.favorites, [userId]: unique } };
 }
 
+// ——— Likes ———
+
+/** Like or unlike a review or list; keeps the visible count in step. */
+export function toggleLike(state: AppState, kind: "review" | "list", targetId: ID): AppState {
+  requireUser(state);
+  const key = kind === "review" ? "reviews" : "lists";
+  const on = !state.liked[key].includes(targetId);
+  const liked = { ...state.liked, [key]: on ? [...state.liked[key], targetId] : state.liked[key].filter((id) => id !== targetId) };
+  const bump = <T extends { id: ID; likeCount?: number }>(x: T): T =>
+    x.id === targetId ? { ...x, likeCount: Math.max(0, (x.likeCount ?? 0) + (on ? 1 : -1)) } : x;
+  return kind === "review"
+    ? { ...state, liked, reviews: state.reviews.map(bump) }
+    : { ...state, liked, lists: state.lists.map(bump) };
+}
+
+/** Change a comment count after posting/removing a comment (the database keeps the real counter). */
+export function bumpCommentCount(state: AppState, kind: "review" | "list", targetId: ID, delta: number): AppState {
+  const bump = <T extends { id: ID; commentCount?: number }>(x: T): T =>
+    x.id === targetId ? { ...x, commentCount: Math.max(0, (x.commentCount ?? 0) + delta) } : x;
+  return kind === "review" ? { ...state, reviews: state.reviews.map(bump) } : { ...state, lists: state.lists.map(bump) };
+}
+
 // ——— Follows ———
+
+/** The per-friend bell: whether to be notified about someone you follow. */
+export function setFollowNotify(state: AppState, targetId: ID, notify: boolean): AppState {
+  const userId = requireUser(state);
+  if (!state.follows.some((f) => f.followerId === userId && f.followingId === targetId)) {
+    throw new PrototypeError("Follow them first to get notifications.");
+  }
+  return {
+    ...state,
+    follows: state.follows.map((f) => (f.followerId === userId && f.followingId === targetId ? { ...f, notify } : f)),
+  };
+}
 
 export function toggleFollow(state: AppState, targetId: ID, now = new Date().toISOString()): AppState {
   const userId = requireUser(state);

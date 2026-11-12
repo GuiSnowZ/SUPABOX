@@ -186,6 +186,49 @@ await as(A, "update public.profiles set bio = 'hello' where id = $1", [A]);
 ok("can edit own profile", (await db.query("select bio from public.profiles where id = $1", [A])).rows[0].bio === "hello");
 ok("games are read-only for users", await fails(A, "insert into public.games (slug, title, provider, provider_id) values ('x', 'x', 'm', '1')"));
 
+// Notifications, likes, comments
+const G3 = ids(3)[2], G4 = ids(4)[3], G7 = ids(7)[6];
+const notifs = async (uid) => (await as(uid, "select kind, activity_type, actor_id from public.notifications order by created_at")).rows;
+await as(B, "insert into public.follows (follower_id, following_id) values ($1, $2)", [B, A]);
+await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'playing')", [A, G7]);
+ok("follower is notified when a friend starts playing", (await notifs(B)).some((n) => n.kind === "activity" && n.activity_type === "started_playing" && n.actor_id === A));
+ok("users only see their own notifications", (await notifs(A)).every((n) => n.actor_id !== A) && (await as(A, "select count(*)::int n from public.notifications where recipient_id = $1", [B])).rows[0].n === 0);
+await as(B, "update public.follows set notify = false where follower_id = $1 and following_id = $2", [B, A]);
+await as(A, "update public.user_games set status = 'completed' where user_id = $1 and game_id = $2", [A, G7]);
+ok("per-friend bell off: no notification", !(await notifs(B)).some((n) => n.activity_type === "completed"));
+ok("cannot re-point a follow via update", await fails(B, "update public.follows set following_id = $3 where follower_id = $1 and following_id = $2", [B, A, B]));
+await as(B, "update public.follows set notify = true where follower_id = $1 and following_id = $2", [B, A]);
+await as(B, "insert into public.notification_preferences (user_id, started_playing) values ($1, false)", [B]);
+await as(A, "update public.user_games set status = 'playing' where user_id = $1 and game_id = $2", [A, G7]);
+const playingNotifs = (await notifs(B)).filter((n) => n.activity_type === "started_playing").length;
+ok("type turned off in preferences: repeat activity replaces, never adds", playingNotifs === 0);
+ok("cannot write someone else's preferences", await fails(A, "insert into public.notification_preferences (user_id) values ($1)", [B]));
+ok("clients cannot create notifications", await fails(A, "insert into public.notifications (recipient_id, actor_id, kind) values ($1, $2, 'activity')", [B, A]));
+
+const revA = (await db.query("select id from public.reviews where user_id = $1 and game_id = $2", [A, G3])).rows[0].id;
+await as(B, "insert into public.review_likes (user_id, review_id) values ($1, $2)", [B, revA]);
+ok("like increments the counter", (await db.query("select like_count from public.reviews where id = $1", [revA])).rows[0].like_count === 1);
+ok("author is notified of the like", (await notifs(A)).some((n) => n.kind === "review_like" && n.actor_id === B));
+ok("cannot like twice", await fails(B, "insert into public.review_likes (user_id, review_id) values ($1, $2)", [B, revA]));
+ok("cannot like as someone else", await fails(A, "insert into public.review_likes (user_id, review_id) values ($1, $2)", [B, revA]));
+await as(A, "update public.reviews set like_count = 999 where id = $1", [revA]);
+ok("authors cannot fake like counts", (await db.query("select like_count from public.reviews where id = $1", [revA])).rows[0].like_count === 1);
+await as(B, "delete from public.review_likes where user_id = $1 and review_id = $2", [B, revA]);
+ok("unlike decrements and removes the notification", (await db.query("select like_count from public.reviews where id = $1", [revA])).rows[0].like_count === 0 && !(await notifs(A)).some((n) => n.kind === "review_like"));
+
+const cB = (await as(B, "insert into public.comments (user_id, review_id, body) values ($1, $2, 'Nice!') returning id", [B, revA])).rows[0].id;
+ok("comment increments the counter and notifies the author", (await db.query("select comment_count from public.reviews where id = $1", [revA])).rows[0].comment_count === 1 && (await notifs(A)).some((n) => n.kind === "review_comment"));
+ok("empty comments are rejected", await fails(B, "insert into public.comments (user_id, review_id, body) values ($1, $2, '   ')", [B, revA]));
+ok("a comment targets exactly one thing", await fails(B, "insert into public.comments (user_id, review_id, list_id, body) values ($1, $2, $3, 'x')", [B, revA, L1]));
+await as(A, "delete from public.comments where id = $1", [cB]);
+ok("review owner can remove comments on their review", (await db.query("select comment_count from public.reviews where id = $1", [revA])).rows[0].comment_count === 0 && !(await notifs(A)).some((n) => n.kind === "review_comment"));
+ok("cannot like a private list you can't see", await fails(B, "insert into public.list_likes (user_id, list_id) values ($1, $2)", [B, L1]));
+ok("cannot comment on a private list you can't see", await fails(B, "insert into public.comments (user_id, list_id, body) values ($1, $2, 'hi')", [B, L1]));
+await as(A, "insert into public.list_likes (user_id, list_id) values ($1, $2)", [A, L1]);
+ok("liking your own list doesn't notify you", !(await notifs(A)).some((n) => n.kind === "list_like"));
+await as(B, "update public.notifications set read_at = now() where recipient_id = $1", [B]);
+ok("can mark own notifications read", (await as(B, "select count(*)::int n from public.notifications where read_at is null")).rows[0].n === 0);
+
 // Diary
 ok("finish date after start", await fails(A, "insert into public.play_sessions (user_id, game_id, started_on, finished_on) values ($1, $2, '2026-01-02', '2026-01-01')", [A, G1]));
 

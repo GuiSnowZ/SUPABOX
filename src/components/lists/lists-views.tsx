@@ -3,12 +3,28 @@
 import { Globe, ListPlus, Lock, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoadError, PageSkeleton, RequireUser } from "@/components/layout/require-user";
+import {
+  LoadError,
+  PageSkeleton,
+  RequireUser,
+} from "@/components/layout/require-user";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/confirm-button";
-import { Badge, Container, EmptyState, PageHeader, SectionHeader, Skeleton } from "@/components/ui/primitives";
-import { getListGames, getListsByUser, getProfileById, getPublicLists } from "@/features/app/selectors";
+import {
+  Badge,
+  Container,
+  EmptyState,
+  PageHeader,
+  SectionHeader,
+  Skeleton,
+} from "@/components/ui/primitives";
+import {
+  getListGames,
+  getListsByUser,
+  getProfileById,
+  getPublicLists,
+} from "@/features/app/selectors";
 import { canViewList } from "@/features/app/state";
 import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
@@ -16,6 +32,8 @@ import { formatDate, pluralize } from "@/lib/utils";
 import { ListCard, ListGrid } from "./list-card";
 import { ListEditor } from "./list-editor";
 import { ListGameGrid } from "./list-game-grid";
+import { Comments } from "@/components/social/comments";
+import { LikeButton } from "@/components/social/like-button";
 import { GameRoulette } from "./game-roulette";
 import { OfficialListCard } from "./official-list-card";
 import { LogoMark } from "@/components/layout/logo";
@@ -24,7 +42,13 @@ import type { OfficialListSummary } from "@/lib/official-lists/server";
 import type { ListCategory } from "@/lib/official-lists/ranking";
 import type { Game } from "@/types";
 
-const CATEGORY_ORDER: ListCategory[] = ["rankings", "platforms", "companies", "genres", "special"];
+const CATEGORY_ORDER: ListCategory[] = [
+  "rankings",
+  "platforms",
+  "companies",
+  "genres",
+  "special",
+];
 
 /** Official lists grouped by category, with the community lists below. */
 function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
@@ -32,11 +56,15 @@ function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
   return (
     <section aria-labelledby="official-heading" className="space-y-10">
       <div>
-        <h2 id="official-heading" className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+        <h2
+          id="official-heading"
+          className="flex items-center gap-2 text-xl font-semibold tracking-tight"
+        >
           <LogoMark className="h-6 w-6" /> Official Supabox Lists
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Built by Supabox from critic and player ratings on IGDB — every list explains how it was made.
+          Built by Supabox from critic and player ratings on IGDB — every list
+          explains how it was made.
         </p>
       </div>
       {CATEGORY_ORDER.map((cat) => {
@@ -57,13 +85,21 @@ function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
   );
 }
 
-export function ListsDiscover({ official = [], classics = [] }: { official?: OfficialListSummary[]; classics?: Game[] }) {
+export function ListsDiscover({
+  official = [],
+  classics = [],
+}: {
+  official?: OfficialListSummary[];
+  classics?: Game[];
+}) {
   const state = useAppState();
   const booting = state.loads.bootstrap !== "ready";
   const publicLists = getPublicLists(state);
   const featured = publicLists.filter((l) => l.featured);
   const recent = publicLists.slice(0, 6);
-  const mine = state.currentUserId ? getListsByUser(state, state.currentUserId, state.currentUserId) : [];
+  const mine = state.currentUserId
+    ? getListsByUser(state, state.currentUserId, state.currentUserId)
+    : [];
 
   return (
     <Container>
@@ -79,11 +115,15 @@ export function ListsDiscover({ official = [], classics = [] }: { official?: Off
       <div className="space-y-14">
         <GameRoulette classics={classics} />
         <OfficialLists lists={official} />
-        <h2 className="-mb-6 text-xl font-semibold tracking-tight">Community Lists</h2>
+        <h2 className="-mb-6 text-xl font-semibold tracking-tight">
+          Community Lists
+        </h2>
         {featured.length ? (
           <section aria-labelledby="featured-heading">
             <SectionHeader id="featured-heading" title="Featured Lists" />
-            <p className="-mt-2 mb-5 text-xs text-faint">Hand-picked by the Supabox team.</p>
+            <p className="-mt-2 mb-5 text-xs text-faint">
+              Hand-picked by the Supabox team.
+            </p>
             <ListGrid>
               {featured.map((l) => (
                 <ListCard key={l.id} list={l} />
@@ -116,7 +156,11 @@ export function ListsDiscover({ official = [], classics = [] }: { official?: Off
         </section>
         {state.currentUserId && !booting ? (
           <section aria-labelledby="my-lists-heading">
-            <SectionHeader id="my-lists-heading" title="My Lists" count={mine.length} />
+            <SectionHeader
+              id="my-lists-heading"
+              title="My Lists"
+              count={mine.length}
+            />
             {mine.length ? (
               <ListGrid>
                 {mine.map((l) => (
@@ -128,7 +172,9 @@ export function ListsDiscover({ official = [], classics = [] }: { official?: Off
                 icon={<ListPlus />}
                 title="You haven't made a list yet"
                 description="Best horror games? Childhood favorites? Start one in seconds."
-                action={<ButtonLink href="/lists/new">Create a list</ButtonLink>}
+                action={
+                  <ButtonLink href="/lists/new">Create a list</ButtonLink>
+                }
               />
             )}
           </section>
@@ -144,7 +190,8 @@ export function ListDetail({ id }: { id: string }) {
   const router = useRouter();
   const list = state.lists.find((l) => l.id === id);
 
-  if (status === "error" && !list) return <LoadError onRetry={() => void loaders.list(id)} />;
+  if (status === "error" && !list)
+    return <LoadError onRetry={() => void loaders.list(id)} />;
   if (!list && status !== "ready") {
     return (
       <Container className="pt-10">
@@ -192,44 +239,79 @@ export function ListDetail({ id }: { id: string }) {
             )}
             {list.featured ? <Badge tone="accent">Featured</Badge> : null}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{list.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {list.title}
+          </h1>
           {author ? (
             <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-              <Link href={`/users/${author.username}`} className="inline-flex items-center gap-2 hover:text-fg">
+              <Link
+                href={`/users/${author.username}`}
+                className="inline-flex items-center gap-2 hover:text-fg"
+              >
                 <Avatar profile={author} size="xs" />
-                <span className="font-medium text-fg">{author.displayName}</span>
+                <span className="font-medium text-fg">
+                  {author.displayName}
+                </span>
               </Link>
               <span className="text-faint">
-                · {pluralize(games.length, "game")} · updated {formatDate(list.updatedAt)}
+                · {pluralize(games.length, "game")} · updated{" "}
+                {formatDate(list.updatedAt)}
               </span>
             </p>
           ) : null}
-          {list.description ? <p className="mt-4 leading-relaxed text-muted">{list.description}</p> : null}
+          {list.description ? (
+            <p className="mt-4 leading-relaxed text-muted">
+              {list.description}
+            </p>
+          ) : null}
         </div>
-        {isOwner ? (
-          <div className="flex shrink-0 items-center gap-1">
-            <ButtonLink href={`/lists/${list.id}/edit`} variant="secondary" size="sm">
-              <Pencil className="h-3.5 w-3.5" /> Edit
-            </ButtonLink>
-            <ConfirmButton
-              prompt="Delete this list?"
-              onConfirm={async () => {
-                const r = await actions.deleteList(list.id);
-                if (!r.ok) return toast(r.error, "error");
-                toast("List deleted");
-                router.push("/lists");
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
-            </ConfirmButton>
-          </div>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap items-center gap-1">
+          <LikeButton
+            kind="list"
+            targetId={list.id}
+            count={list.likeCount ?? 0}
+            size="md"
+          />
+          {isOwner ? (
+            <>
+              <ButtonLink
+                href={`/lists/${list.id}/edit`}
+                variant="secondary"
+                size="sm"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </ButtonLink>
+              <ConfirmButton
+                prompt="Delete this list?"
+                onConfirm={async () => {
+                  const r = await actions.deleteList(list.id);
+                  if (!r.ok) return toast(r.error, "error");
+                  toast("List deleted");
+                  router.push("/lists");
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </ConfirmButton>
+            </>
+          ) : null}
+        </div>
       </header>
       {games.length ? (
-        <ListGameGrid title={list.title} entries={games.map((game) => ({ game }))} />
+        <ListGameGrid
+          title={list.title}
+          entries={games.map((game) => ({ game }))}
+        />
       ) : (
-        <EmptyState title="This list is empty" description={isOwner ? "Edit the list to add games." : undefined} />
+        <EmptyState
+          title="This list is empty"
+          description={isOwner ? "Edit the list to add games." : undefined}
+        />
       )}
+      {list.visibility === "public" || isOwner ? (
+        <div className="mt-14">
+          <Comments kind="list" targetId={list.id} ownerId={list.userId} />
+        </div>
+      ) : null}
     </Container>
   );
 }
@@ -239,7 +321,10 @@ export function NewList() {
     <RequireUser message="Sign in to create lists.">
       {() => (
         <Container>
-          <PageHeader title="New list" description="Lists can include any game — not only ones in your library." />
+          <PageHeader
+            title="New list"
+            description="Lists can include any game — not only ones in your library."
+          />
           <ListEditor />
         </Container>
       )}
@@ -251,13 +336,17 @@ export function EditList({ id }: { id: string }) {
   const state = useAppState();
   const status = useLoad(`list:${id}`, () => loaders.list(id));
   const list = state.lists.find((l) => l.id === id);
-  if (!list && status !== "ready" && status !== "error") return <PageSkeleton />;
+  if (!list && status !== "ready" && status !== "error")
+    return <PageSkeleton />;
   return (
     <RequireUser message="Sign in to edit your lists.">
       {(user) =>
         !list || list.userId !== user.id ? (
           <Container className="py-16">
-            <EmptyState title="You can't edit this list" description="Only the list's creator can edit it." />
+            <EmptyState
+              title="You can't edit this list"
+              description="Only the list's creator can edit it."
+            />
           </Container>
         ) : (
           <Container>

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Library, ListPlus, Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
+import { BellOff, BellRing, BookMarked, Library, ListPlus, Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { GameCard } from "@/components/games/game-card";
@@ -27,6 +27,7 @@ import { promptSignIn, toast } from "@/features/app/ui-store";
 import { formatDate } from "@/lib/utils";
 import type { Game, Profile } from "@/types";
 import { FavoriteGames } from "./favorite-games";
+import { Medals } from "./medals";
 import { RatedGames } from "./rated-games";
 
 function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
@@ -73,6 +74,32 @@ function FollowButton({ profile }: { profile: Profile }) {
           <UserPlus className="h-4 w-4" /> Follow
         </>
       )}
+    </Button>
+  );
+}
+
+/** Per-friend bell: shown next to "Following" to turn this person's notifications on or off. */
+function FriendBell({ profile }: { profile: Profile }) {
+  const state = useAppState();
+  const me = state.currentUserId;
+  const follow = state.follows.find((f) => f.followerId === me && f.followingId === profile.id);
+  if (!follow) return null;
+  const on = follow.notify !== false;
+  return (
+    <Button
+      variant="secondary"
+      size="icon"
+      className="h-10 w-10"
+      aria-pressed={on}
+      aria-label={on ? `Turn off notifications from ${profile.displayName}` : `Turn on notifications from ${profile.displayName}`}
+      title={on ? "Notifications on" : "Notifications off"}
+      onClick={async () => {
+        const r = await actions.setFollowNotify(profile.id, !on);
+        if (!r.ok) return toast(r.error, "error");
+        toast(on ? `You won't be notified about ${profile.displayName}` : `You'll be notified about ${profile.displayName}`);
+      }}
+    >
+      {on ? <BellRing className="h-4 w-4 text-accent" /> : <BellOff className="h-4 w-4" />}
     </Button>
   );
 }
@@ -149,7 +176,10 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 <Pencil className="h-4 w-4" /> Edit Profile
               </ButtonLink>
             ) : (
-              <FollowButton profile={profile} />
+              <>
+                <FollowButton profile={profile} />
+                <FriendBell profile={profile} />
+              </>
             )}
           </div>
         </Container>
@@ -168,6 +198,8 @@ function ProfileContent({ profile }: { profile: Profile }) {
         ) : null}
 
         <FavoriteGames games={favorites} isOwner={isOwner} />
+
+        <Medals reviews={getReviewsByUser(state, profile.id).filter(hasText).length} completed={completed.length} />
 
         <RatedGames userId={profile.id} />
 

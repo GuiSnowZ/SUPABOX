@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { buttonClasses } from "@/components/ui/button";
+import { NotificationBell } from "@/components/social/notification-bell";
 import { Avatar } from "@/components/ui/avatar";
 import { useCurrentUser } from "@/features/app/hooks";
 import { signOut } from "@/features/app/auth";
@@ -155,6 +156,7 @@ export function SiteHeader() {
           >
             <Search className="h-4 w-4" />
           </Link>
+          <NotificationBell />
           <Link href="/library" className={buttonClasses("ghost", "sm", "max-lg:hidden")}>
             <Library className="h-4 w-4" />
             Library

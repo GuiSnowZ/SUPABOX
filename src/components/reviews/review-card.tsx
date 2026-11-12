@@ -1,9 +1,10 @@
 "use client";
 
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { GameCover } from "@/components/games/game-cover";
+import { LikeButton } from "@/components/social/like-button";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClasses } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/confirm-button";
@@ -49,6 +50,7 @@ export function ReviewCard({
   showAuthor = false,
   showGame = true,
   editable = false,
+  full = false,
 }: {
   review: Review;
   game: Game;
@@ -56,6 +58,8 @@ export function ReviewCard({
   showAuthor?: boolean;
   showGame?: boolean;
   editable?: boolean;
+  /** On the review's own page: never clamp the text, and no "comments" link. */
+  full?: boolean;
 }) {
   const edited = review.updatedAt !== review.createdAt;
   return (
@@ -90,7 +94,20 @@ export function ReviewCard({
           {edited ? <span> · edited {formatDate(review.updatedAt)}</span> : null}
         </p>
         <div className="mt-2.5">
-          <ReviewBody review={review} clamp={!editable} />
+          <ReviewBody review={review} clamp={!editable && !full} />
+        </div>
+        <div className="mt-2 -ml-2 flex items-center gap-1">
+          <LikeButton kind="review" targetId={review.id} count={review.likeCount ?? 0} />
+          {full ? null : (
+            <Link
+              href={`/reviews/${review.id}`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted hover:text-fg"
+              aria-label={`Comments (${review.commentCount ?? 0})`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span className="tabular-nums">{review.commentCount ? review.commentCount : "Comment"}</span>
+            </Link>
+          )}
         </div>
         {editable ? (
           <div className="mt-3 flex flex-wrap items-center gap-1">

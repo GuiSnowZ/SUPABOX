@@ -89,15 +89,15 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 4 — Social
 
-- [ ] **2. Notificações de atividades de amigos** ("amigos" = pessoas que você segue).
+- [x] **2. Notificações de atividades de amigos** ("amigos" = pessoas que você segue).
   - Sininho no cabeçalho com contador.
   - Preferências por tipo de atividade: adicionou à coleção, começou a jogar, deu nota ou publicou review.
   - Sininho no perfil de cada pessoa para ligar ou desligar as notificações dela.
   - Geradas no banco a partir do feed de atividades que já existe.
-- [ ] **S1. Curtidas e comentários** em reviews e listas, com notificação para o autor.
-- [ ] **13. Medalhas**
+- [x] **S1. Curtidas e comentários** em reviews e listas, com notificação para o autor.
+- [x] **13. Medalhas**
   - Por reviews escritas e por jogos zerados.
-  - Níveis: Bronze 1, Prata 10, Ouro 25, Platina 50, Diamante 100.
+  - 9 níveis com as artes do Supabox: Latão 1, Bronze 5, Prata 10, Ouro 25, Platina 50, Esmeralda 100, Diamante 250, Rubi 500, Lendário 1000.
   - Calculadas automaticamente e exibidas no perfil.
   - Sem pontos, moedas ou compras.
 

@@ -15,7 +15,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Follow, Game, GameList, ID, PlaySession, Profile, Review, UserGame } from "@/types";
-import { avatarPublicUrl, friendlyError, loadBootstrap, loadGame, loadGames, loadList, loadUser, type Patch, write } from "./db";
+import { avatarPublicUrl, friendlyError, loadBootstrap, loadGame, loadGames, loadList, loadReview, loadUser, type Patch, write } from "./db";
 import * as t from "./state";
 import { type AppState, createEmptyState, type LoadStatus, PrototypeError } from "./state";
 
@@ -25,6 +25,16 @@ const listeners = new Set<() => void>();
 
 function get() {
   return current;
+}
+
+/** Adjust a cached comment count after the comments panel posts or removes one. */
+/** Merge profiles fetched outside the loaders (e.g. comment authors). */
+export function registerProfiles(profiles: Profile[]) {
+  if (profiles.length) commit(merge(get(), { profiles }));
+}
+
+export function adjustCommentCount(kind: "review" | "list", targetId: ID, delta: number) {
+  commit(t.bumpCommentCount(get(), kind, targetId, delta));
 }
 
 /** Current state outside React (event handlers that need a fresh snapshot). */
@@ -78,6 +88,7 @@ function merge(state: AppState, patch: Patch, scopeUserId?: ID): AppState {
     ),
     favorites: patch.favorites ? { ...state.favorites, ...patch.favorites } : state.favorites,
     activities: patch.activities ?? state.activities,
+    liked: patch.liked ?? state.liked,
   };
 }
 
@@ -196,6 +207,11 @@ export const loaders = {
     load(`user:${username.toLowerCase()}`, async (db) => {
       const patch = await loadUser(db, username);
       return (s) => (patch ? merge(s, patch, patch.userId) : s);
+    }),
+  review: (reviewId: ID) =>
+    load(`review:${reviewId}`, async (db) => {
+      const patch = await loadReview(db, reviewId);
+      return (s) => merge(s, patch);
     }),
   list: (listId: ID) =>
     load(`list:${listId}`, async (db) => {
@@ -342,6 +358,17 @@ export const actions = {
     mutate(same((s) => t.setFavorites(s, gameIds)), async (db, _p, next) => {
       await write.setFavorites(db, next.favorites[me(next)] ?? []);
     }),
+
+  toggleLike: (kind: "review" | "list", targetId: ID) =>
+    mutate(same((s) => t.toggleLike(s, kind, targetId)), async (db, _p, next) => {
+      const key = kind === "review" ? "reviews" : "lists";
+      await write.setLike(db, kind, me(next), targetId, next.liked[key].includes(targetId));
+    }),
+
+  setFollowNotify: (targetId: ID, notify: boolean) =>
+    mutate(same((s) => t.setFollowNotify(s, targetId, notify)), (db, _p, next) =>
+      write.setFollowNotify(db, me(next), targetId, notify),
+    ),
 
   toggleFollow: (targetId: ID) =>
     mutate(same((s) => t.toggleFollow(s, targetId)), async (db, _p, next) => {

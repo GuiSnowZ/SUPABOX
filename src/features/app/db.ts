@@ -47,6 +47,8 @@ interface ReviewRow {
   contains_spoilers: boolean;
   created_at: string;
   updated_at: string;
+  like_count?: number;
+  comment_count?: number;
 }
 interface PlaySessionRow {
   id: string;
@@ -67,12 +69,15 @@ interface ListRow {
   featured: boolean;
   created_at: string;
   updated_at: string;
+  like_count?: number;
+  comment_count?: number;
   list_items?: { game_id: string; position: number; added_at: string }[];
 }
 interface FollowRow {
   follower_id: string;
   following_id: string;
   created_at: string;
+  notify?: boolean;
 }
 interface FavoriteRow {
   user_id: string;
@@ -122,6 +127,8 @@ export const toReview = (r: ReviewRow): Review => ({
   containsSpoilers: r.contains_spoilers,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  likeCount: r.like_count ?? 0,
+  commentCount: r.comment_count ?? 0,
 });
 
 export const toPlaySession = (r: PlaySessionRow): PlaySession => ({
@@ -144,6 +151,8 @@ export const toList = (r: ListRow): GameList => ({
   featured: r.featured,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  likeCount: r.like_count ?? 0,
+  commentCount: r.comment_count ?? 0,
   items: (r.list_items ?? [])
     .map((i) => ({ gameId: i.game_id, position: i.position, addedAt: i.added_at }))
     .sort((a, b) => a.position - b.position),
@@ -153,6 +162,7 @@ export const toFollow = (r: FollowRow): Follow => ({
   followerId: r.follower_id,
   followingId: r.following_id,
   createdAt: r.created_at,
+  notify: r.notify ?? true,
 });
 
 export const toActivity = (r: ActivityRow): Activity => ({
@@ -212,6 +222,8 @@ export interface Patch {
   favorites?: Record<ID, ID[]>;
   follows?: Follow[];
   activities?: Activity[];
+  /** Reviews and lists the signed-in user has liked. */
+  liked?: { reviews: ID[]; lists: ID[] };
 }
 
 async function fetchProfiles(db: SupabaseClient, ids: Iterable<ID>): Promise<Profile[]> {
@@ -231,7 +243,7 @@ export async function loadBootstrap(db: SupabaseClient, userId: ID | null): Prom
   let own: Patch = {};
   let following: ID[] = [];
   if (userId) {
-    const [profile, library, reviews, sessions, lists, favorites, follows] = await Promise.all([
+    const [profile, library, reviews, sessions, lists, favorites, follows, reviewLikes, listLikes] = await Promise.all([
       db.from("profiles").select("*").eq("id", userId).maybeSingle(),
       db.from("user_games").select("*").eq("user_id", userId),
       db.from("reviews").select("*").eq("user_id", userId),
@@ -239,6 +251,8 @@ export async function loadBootstrap(db: SupabaseClient, userId: ID | null): Prom
       db.from("lists").select(LIST_SELECT).eq("user_id", userId),
       db.from("user_favorite_games").select("*").eq("user_id", userId),
       db.from("follows").select("*").or(`follower_id.eq.${userId},following_id.eq.${userId}`),
+      db.from("review_likes").select("review_id").eq("user_id", userId).limit(5000),
+      db.from("list_likes").select("list_id").eq("user_id", userId).limit(5000),
     ]);
     const followRows = unwrap<FollowRow[]>(follows).map(toFollow);
     following = followRows.filter((f) => f.followerId === userId).map((f) => f.followingId);
@@ -251,6 +265,10 @@ export async function loadBootstrap(db: SupabaseClient, userId: ID | null): Prom
       lists: unwrap<ListRow[]>(lists).map(toList),
       favorites: { [userId]: toFavorites(unwrap<FavoriteRow[]>(favorites))[userId] ?? [] },
       follows: followRows,
+      liked: {
+        reviews: (reviewLikes.data ?? []).map((r: { review_id: string }) => r.review_id),
+        lists: (listLikes.data ?? []).map((r: { list_id: string }) => r.list_id),
+      },
     };
   }
 
@@ -294,6 +312,56 @@ export async function loadBootstrap(db: SupabaseClient, userId: ID | null): Prom
 }
 
 /** Reviews for a game page (and their authors). */
+/** One review with its author (for the review page). */
+export async function loadReview(db: SupabaseClient, reviewId: ID): Promise<Patch> {
+  const row = unwrap<ReviewRow | null>(await db.from("reviews").select("*").eq("id", reviewId).maybeSingle());
+  if (!row) return {};
+  const review = toReview(row);
+  return { reviews: [review], profiles: await fetchProfiles(db, [review.userId]) };
+}
+
+// ——— Comments (loaded per review/list, not cached globally) ———
+
+export interface CommentItem {
+  id: ID;
+  userId: ID;
+  body: string;
+  createdAt: ISODateString;
+}
+type ISODateString = string;
+
+export async function loadComments(
+  db: SupabaseClient,
+  kind: "review" | "list",
+  targetId: ID,
+): Promise<{ comments: CommentItem[]; profiles: Profile[] }> {
+  const rows = unwrap<Array<{ id: string; user_id: string; body: string; created_at: string }>>(
+    await db
+      .from("comments")
+      .select("id, user_id, body, created_at")
+      .eq(kind === "review" ? "review_id" : "list_id", targetId)
+      .order("created_at", { ascending: true })
+      .limit(300),
+  );
+  const comments = rows.map((r) => ({ id: r.id, userId: r.user_id, body: r.body, createdAt: r.created_at }));
+  return { comments, profiles: await fetchProfiles(db, comments.map((c) => c.userId)) };
+}
+
+export async function postComment(db: SupabaseClient, kind: "review" | "list", targetId: ID, userId: ID, body: string): Promise<CommentItem> {
+  const r = unwrap<{ id: string; user_id: string; body: string; created_at: string }>(
+    await db
+      .from("comments")
+      .insert({ user_id: userId, body, [kind === "review" ? "review_id" : "list_id"]: targetId })
+      .select("id, user_id, body, created_at")
+      .single(),
+  );
+  return { id: r.id, userId: r.user_id, body: r.body, createdAt: r.created_at };
+}
+
+export async function deleteComment(db: SupabaseClient, id: ID) {
+  unwrap(await db.from("comments").delete().eq("id", id));
+}
+
 export async function loadGame(db: SupabaseClient, gameId: ID): Promise<Patch> {
   const reviews = unwrap<ReviewRow[]>(
     await db.from("reviews").select("*").eq("game_id", gameId).order("updated_at", { ascending: false }).limit(200),
@@ -409,6 +477,15 @@ export const write = {
   },
   async setFavorites(db: SupabaseClient, gameIds: ID[]) {
     unwrap(await db.rpc("set_favorite_games", { p_game_ids: gameIds }));
+  },
+  async setLike(db: SupabaseClient, kind: "review" | "list", userId: ID, targetId: ID, on: boolean) {
+    const table = kind === "review" ? "review_likes" : "list_likes";
+    const column = kind === "review" ? "review_id" : "list_id";
+    if (on) unwrap(await db.from(table).insert({ user_id: userId, [column]: targetId }));
+    else unwrap(await db.from(table).delete().eq("user_id", userId).eq(column, targetId));
+  },
+  async setFollowNotify(db: SupabaseClient, followerId: ID, followingId: ID, notify: boolean) {
+    unwrap(await db.from("follows").update({ notify }).eq("follower_id", followerId).eq("following_id", followingId));
   },
   async follow(db: SupabaseClient, followerId: ID, followingId: ID, on: boolean) {
     if (on) unwrap(await db.from("follows").insert({ follower_id: followerId, following_id: followingId }));
