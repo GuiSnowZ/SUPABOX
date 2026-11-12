@@ -47,7 +47,10 @@ Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supaba
 ## Deployment
 
 - **Hosting:** Vercel project `supabox` (Hobby plan), connected to this GitHub repository. Every push to `main` deploys to production automatically.
-- **Domain:** `supaboxd.com` (registered at Wix; its DNS has an A record pointing to Vercel at `216.198.79.1`). `www.supaboxd.com` permanently redirects to it. Vercel issues the HTTPS certificates.
+- **Domain:** `supaboxd.com` is registered at Wix, but its nameservers are `ns1/ns2.vercel-dns.com`, so all DNS records are managed in Vercel (Domains → supaboxd.com). `www.supaboxd.com` permanently redirects to it. Vercel issues the HTTPS certificates.
+- **Email DNS (in Vercel):**
+  - Outgoing (Resend): TXT `resend._domainkey` (DKIM), CNAME `send` and `rsend` (SPF/bounces), TXT `_dmarc`.
+  - Incoming (ImprovMX): MX `@` 10 `mx1.improvmx.com` and 20 `mx2.improvmx.com`, TXT `@` `v=spf1 include:spf.improvmx.com ~all`. `privacy@supaboxd.com` and a catch-all forward to the owner's inbox (set in ImprovMX).
 - **Environment variables:** set in Vercel → Project → Settings → Environment Variables (the same names as `.env.example`). Set `NEXT_PUBLIC_ALLOW_INDEXING=true` and redeploy to let search engines index the site.
 - **Supabase Auth:** Site URL `https://supaboxd.com`. Allowed redirect URLs: localhost, supaboxd.com and the Vercel address.
 - **Catalog refresh:** GitHub Actions runs it daily (`.github/workflows/catalog-sync.yml`).
