@@ -90,6 +90,10 @@ export interface PlaySession {
   startedOn: ISODate;
   finishedOn: ISODate | null;
   note: string;
+  /** Hours played in this playthrough (optional). */
+  hours?: number | null;
+  /** Platform it was played on (optional, one of the game's platforms). */
+  platform?: string | null;
   createdAt: ISODate;
 }
 

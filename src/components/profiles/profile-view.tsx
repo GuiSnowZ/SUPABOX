@@ -1,15 +1,35 @@
 "use client";
 
-import { BellOff, BellRing, BookMarked, Library, ListPlus, Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
+import {
+  BarChart3,
+  BellOff,
+  BellRing,
+  BookMarked,
+  CalendarDays,
+  Library,
+  ListPlus,
+  Pencil,
+  UserCheck,
+  UserPlus,
+  UserX,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { GameCard } from "@/components/games/game-card";
 import { ListCard, ListGrid } from "@/components/lists/list-card";
-import { LoadError, PageSkeleton, RequireUser } from "@/components/layout/require-user";
+import {
+  LoadError,
+  PageSkeleton,
+  RequireUser,
+} from "@/components/layout/require-user";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { Container, EmptyState, SectionHeader } from "@/components/ui/primitives";
+import {
+  Container,
+  EmptyState,
+  SectionHeader,
+} from "@/components/ui/primitives";
 import {
   getFavoriteGames,
   getFollowerIds,
@@ -30,15 +50,28 @@ import { FavoriteGames } from "./favorite-games";
 import { Medals } from "./medals";
 import { RatedGames } from "./rated-games";
 
-function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
+function Stat({
+  value,
+  label,
+  href,
+}: {
+  value: number;
+  label: string;
+  href?: string;
+}) {
   const inner = (
     <>
-      <span className="block text-lg font-semibold tabular-nums text-fg">{value}</span>
+      <span className="block text-lg font-semibold tabular-nums text-fg">
+        {value}
+      </span>
       <span className="text-xs text-muted">{label}</span>
     </>
   );
   return href ? (
-    <Link href={href} className="rounded-md hover:[&>span:first-child]:text-accent">
+    <Link
+      href={href}
+      className="rounded-md hover:[&>span:first-child]:text-accent"
+    >
       {inner}
     </Link>
   ) : (
@@ -56,10 +89,15 @@ function FollowButton({ profile }: { profile: Profile }) {
       aria-pressed={following}
       onClick={async () => {
         if (!state.authReady) return;
-        if (!state.currentUserId) return promptSignIn(`Sign in to follow ${profile.displayName}.`);
+        if (!state.currentUserId)
+          return promptSignIn(`Sign in to follow ${profile.displayName}.`);
         const r = await actions.toggleFollow(profile.id);
         if (!r.ok) return toast(r.error, "error");
-        toast(following ? `Unfollowed ${profile.displayName}` : `Following ${profile.displayName}`);
+        toast(
+          following
+            ? `Unfollowed ${profile.displayName}`
+            : `Following ${profile.displayName}`,
+        );
       }}
     >
       {following ? (
@@ -82,7 +120,9 @@ function FollowButton({ profile }: { profile: Profile }) {
 function FriendBell({ profile }: { profile: Profile }) {
   const state = useAppState();
   const me = state.currentUserId;
-  const follow = state.follows.find((f) => f.followerId === me && f.followingId === profile.id);
+  const follow = state.follows.find(
+    (f) => f.followerId === me && f.followingId === profile.id,
+  );
   if (!follow) return null;
   const on = follow.notify !== false;
   return (
@@ -91,15 +131,27 @@ function FriendBell({ profile }: { profile: Profile }) {
       size="icon"
       className="h-10 w-10"
       aria-pressed={on}
-      aria-label={on ? `Turn off notifications from ${profile.displayName}` : `Turn on notifications from ${profile.displayName}`}
+      aria-label={
+        on
+          ? `Turn off notifications from ${profile.displayName}`
+          : `Turn on notifications from ${profile.displayName}`
+      }
       title={on ? "Notifications on" : "Notifications off"}
       onClick={async () => {
         const r = await actions.setFollowNotify(profile.id, !on);
         if (!r.ok) return toast(r.error, "error");
-        toast(on ? `You won't be notified about ${profile.displayName}` : `You'll be notified about ${profile.displayName}`);
+        toast(
+          on
+            ? `You won't be notified about ${profile.displayName}`
+            : `You'll be notified about ${profile.displayName}`,
+        );
       }}
     >
-      {on ? <BellRing className="h-4 w-4 text-accent" /> : <BellOff className="h-4 w-4" />}
+      {on ? (
+        <BellRing className="h-4 w-4 text-accent" />
+      ) : (
+        <BellOff className="h-4 w-4" />
+      )}
     </Button>
   );
 }
@@ -125,17 +177,23 @@ function ProfileContent({ profile }: { profile: Profile }) {
   const isOwner = viewerId === profile.id;
 
   const favorites = getFavoriteGames(state, profile.id);
-  const reviews = getReviewsByUser(state, profile.id).filter(hasText).slice(0, 3);
+  const reviews = getReviewsByUser(state, profile.id)
+    .filter(hasText)
+    .slice(0, 3);
   const lists = getListsByUser(state, profile.id, viewerId);
   const library = getLibrary(state, profile.id);
   const completed = library
     .filter((e) => e.entry.status === "completed")
     .sort((a, b) => b.entry.updatedAt.localeCompare(a.entry.updatedAt));
-  const wishlistCount = library.filter((e) => e.entry.status === "want_to_play").length;
+  const wishlistCount = library.filter(
+    (e) => e.entry.status === "want_to_play",
+  ).length;
 
   // Recently played: currently playing first, then games from recent diary entries.
   const recentIds = [
-    ...library.filter((e) => e.entry.status === "playing").map((e) => e.game.id),
+    ...library
+      .filter((e) => e.entry.status === "playing")
+      .map((e) => e.game.id),
     ...getPlaySessions(state, profile.id).map((p) => p.gameId),
   ];
   const recentlyPlayed = [...new Set(recentIds)]
@@ -159,12 +217,21 @@ function ProfileContent({ profile }: { profile: Profile }) {
         <Container className="relative flex flex-col gap-6 py-8 sm:flex-row sm:items-end sm:py-10">
           <Avatar profile={profile} size="xl" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{profile.displayName}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              {profile.displayName}
+            </h1>
             <p className="text-sm text-muted">@{profile.username}</p>
-            {profile.bio ? <p className="mt-3 max-w-xl text-sm leading-relaxed text-fg/85">{profile.bio}</p> : null}
+            {profile.bio ? (
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-fg/85">
+                {profile.bio}
+              </p>
+            ) : null}
             <div className="mt-5 grid grid-cols-5 gap-2 sm:flex sm:gap-x-8">
               <Stat value={completed.length} label="Completed" />
-              <Stat value={getReviewsByUser(state, profile.id).length} label="Reviews" />
+              <Stat
+                value={getReviewsByUser(state, profile.id).length}
+                label="Reviews"
+              />
               <Stat value={lists.length} label="Lists" />
               <Stat value={followers} label="Followers" />
               <Stat value={followingCount} label="Following" />
@@ -186,36 +253,74 @@ function ProfileContent({ profile }: { profile: Profile }) {
       </div>
 
       <Container className="space-y-14 pt-10">
-        {isOwner ? (
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/library" variant="secondary" size="sm">
-              <Library className="h-4 w-4" /> My Library · {library.length}
-            </ButtonLink>
-            <ButtonLink href="/library/wishlist" variant="secondary" size="sm">
-              <BookMarked className="h-4 w-4" /> My Wishlist · {wishlistCount}
-            </ButtonLink>
-          </div>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <ButtonLink
+            href={`/users/${profile.username}/diary`}
+            variant="secondary"
+            size="sm"
+          >
+            <CalendarDays className="h-4 w-4" /> Diary
+          </ButtonLink>
+          <ButtonLink
+            href={`/users/${profile.username}/stats?year=${new Date().getFullYear()}`}
+            variant="secondary"
+            size="sm"
+          >
+            <BarChart3 className="h-4 w-4" /> {new Date().getFullYear()} in
+            Review
+          </ButtonLink>
+          {isOwner ? (
+            <>
+              <ButtonLink href="/library" variant="secondary" size="sm">
+                <Library className="h-4 w-4" /> My Library · {library.length}
+              </ButtonLink>
+              <ButtonLink
+                href="/library/wishlist"
+                variant="secondary"
+                size="sm"
+              >
+                <BookMarked className="h-4 w-4" /> My Wishlist · {wishlistCount}
+              </ButtonLink>
+            </>
+          ) : null}
+        </div>
 
         <FavoriteGames games={favorites} isOwner={isOwner} />
 
-        <Medals reviews={getReviewsByUser(state, profile.id).filter(hasText).length} completed={completed.length} />
+        <Medals
+          reviews={getReviewsByUser(state, profile.id).filter(hasText).length}
+          completed={completed.length}
+        />
 
         <RatedGames userId={profile.id} />
 
         <div className="grid gap-14 lg:grid-cols-2">
           <Section>
             <SectionHeader title="Recently Played" />
-            <CoverRow games={recentlyPlayed.slice(0, 4)} empty="Nothing played recently." />
+            <CoverRow
+              games={recentlyPlayed.slice(0, 4)}
+              empty="Nothing played recently."
+            />
           </Section>
           <Section>
-            <SectionHeader title="Completed" count={completed.length} href={isOwner ? "/library" : undefined} />
-            <CoverRow games={completed.slice(0, 4).map((e) => e.game)} empty="No completed games yet." />
+            <SectionHeader
+              title="Completed"
+              count={completed.length}
+              href={isOwner ? "/library" : undefined}
+            />
+            <CoverRow
+              games={completed.slice(0, 4).map((e) => e.game)}
+              empty="No completed games yet."
+            />
           </Section>
         </div>
 
         <section aria-labelledby="lists-heading">
-          <SectionHeader id="lists-heading" title={isOwner ? "My Lists" : "Lists"} count={lists.length} />
+          <SectionHeader
+            id="lists-heading"
+            title={isOwner ? "My Lists" : "Lists"}
+            count={lists.length}
+          />
           {lists.length ? (
             <ListGrid>
               {lists.slice(0, 6).map((l) => (
@@ -235,13 +340,21 @@ function ProfileContent({ profile }: { profile: Profile }) {
             <p className="text-sm text-muted">No public lists.</p>
           )}
           {isOwner && lists.length ? (
-            <ButtonLink href="/lists/new" variant="secondary" size="sm" className="mt-6">
+            <ButtonLink
+              href="/lists/new"
+              variant="secondary"
+              size="sm"
+              className="mt-6"
+            >
               <ListPlus className="h-4 w-4" /> New list
             </ButtonLink>
           ) : null}
         </section>
 
-        <section aria-labelledby="profile-reviews-heading" className="max-w-3xl">
+        <section
+          aria-labelledby="profile-reviews-heading"
+          className="max-w-3xl"
+        >
           <SectionHeader
             id="profile-reviews-heading"
             title="Recent Reviews"
@@ -257,7 +370,9 @@ function ProfileContent({ profile }: { profile: Profile }) {
           )}
         </section>
 
-        <p className="text-xs text-faint">Member since {formatDate(profile.joinedAt)}</p>
+        <p className="text-xs text-faint">
+          Member since {formatDate(profile.joinedAt)}
+        </p>
       </Container>
     </div>
   );
@@ -266,14 +381,20 @@ function ProfileContent({ profile }: { profile: Profile }) {
 /** `/users/[username]` — anyone's public profile. */
 export function PublicProfile({ username }: { username: string }) {
   const state = useAppState();
-  const status = useLoad(`user:${username.toLowerCase()}`, () => loaders.user(username));
+  const status = useLoad(`user:${username.toLowerCase()}`, () =>
+    loaders.user(username),
+  );
   const profile = getProfileByUsername(state, username);
-  if (status === "error") return <LoadError onRetry={() => void loaders.user(username)} />;
+  if (status === "error")
+    return <LoadError onRetry={() => void loaders.user(username)} />;
   if (!profile && status !== "ready") return <PageSkeleton />;
   if (!profile) {
     return (
       <Container className="py-16">
-        <EmptyState title="User not found" description={`There's no one called @${username} on Supabox.`} />
+        <EmptyState
+          title="User not found"
+          description={`There's no one called @${username} on Supabox.`}
+        />
       </Container>
     );
   }
@@ -282,5 +403,9 @@ export function PublicProfile({ username }: { username: string }) {
 
 /** `/profile` — the signed-in user's own profile. */
 export function MyProfile() {
-  return <RequireUser message="Sign in to see your profile.">{(user) => <ProfileContent profile={user} />}</RequireUser>;
+  return (
+    <RequireUser message="Sign in to see your profile.">
+      {(user) => <ProfileContent profile={user} />}
+    </RequireUser>
+  );
 }

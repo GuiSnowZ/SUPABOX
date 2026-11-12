@@ -248,7 +248,11 @@ export interface PlaySessionInput {
   startedOn: string;
   finishedOn: string | null;
   note: string;
+  hours?: number | null;
+  platform?: string | null;
 }
+
+export const MAX_SESSION_HOURS = 10_000;
 
 export function logPlaySession(
   state: AppState,
@@ -262,6 +266,10 @@ export function logPlaySession(
   if (input.finishedOn && input.finishedOn < input.startedOn) {
     throw new PrototypeError("The finish date can't be before the start date.");
   }
+  const hours = input.hours ?? null;
+  if (hours !== null && (!Number.isFinite(hours) || hours < 0 || hours > MAX_SESSION_HOURS)) {
+    throw new PrototypeError("Hours played must be between 0 and 10,000.");
+  }
   const entry: PlaySession = {
     id: createId(),
     userId,
@@ -270,6 +278,8 @@ export function logPlaySession(
     startedOn: input.startedOn,
     finishedOn: input.finishedOn || null,
     note: input.note.trim().slice(0, 500),
+    hours: hours === null ? null : Math.round(hours * 10) / 10,
+    platform: input.platform?.trim() ? input.platform.trim().slice(0, 60) : null,
     createdAt: now,
   };
   return { ...state, playSessions: [entry, ...state.playSessions] };

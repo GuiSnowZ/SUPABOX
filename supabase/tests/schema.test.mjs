@@ -232,6 +232,9 @@ await as(B, "update public.notifications set read_at = now() where recipient_id 
 ok("can mark own notifications read", (await as(B, "select count(*)::int n from public.notifications where read_at is null")).rows[0].n === 0);
 
 // Diary
+await as(B, "insert into public.play_sessions (user_id, game_id, started_on, hours, platform) values ($1, $2, '2026-01-01', 12.5, 'PlayStation 5')", [B, G1]);
+ok("diary stores hours and platform", (await db.query("select hours::float h, platform from public.play_sessions where user_id = $1", [B])).rows.some((r) => r.h === 12.5 && r.platform === "PlayStation 5"));
+ok("negative hours rejected", await fails(B, "insert into public.play_sessions (user_id, game_id, started_on, hours) values ($1, $2, '2026-01-01', -1)", [B, G1]));
 ok("finish date after start", await fails(A, "insert into public.play_sessions (user_id, game_id, started_on, finished_on) values ($1, $2, '2026-01-02', '2026-01-01')", [A, G1]));
 
 // Account deletion cascades

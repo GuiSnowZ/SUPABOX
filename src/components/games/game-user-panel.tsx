@@ -126,6 +126,8 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
   const [startedOn, setStartedOn] = useState(today);
   const [finishedOn, setFinishedOn] = useState("");
   const [note, setNote] = useState("");
+  const [hours, setHours] = useState("");
+  const [platform, setPlatform] = useState(game.platforms.length === 1 ? game.platforms[0] : "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const showStart = !quick || stage !== "just_started";
@@ -141,6 +143,8 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       startedOn: quick && stage === "just_started" ? today : startedOn,
       finishedOn: quick ? (completing ? today : null) : finishedOn || null,
       note,
+      hours: hours.trim() ? Number(hours.replace(",", ".")) : null,
+      platform: platform || null,
     });
     if (!r.ok) {
       setPending(false);
@@ -211,6 +215,29 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       <Field label="Note" htmlFor="diary-note">
         <Input id="diary-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Optional" />
       </Field>
+      <Field label="Platform" htmlFor="diary-platform">
+        <Select id="diary-platform" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+          <option value="">Not specified</option>
+          {game.platforms.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field label="Hours played" htmlFor="diary-hours" hint="Optional.">
+        <Input
+          id="diary-hours"
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={10000}
+          step={0.5}
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder="e.g. 12"
+        />
+      </Field>
       {showStart ? (
         <Field label="Started" htmlFor="diary-start">
           <Input id="diary-start" type="date" value={startedOn} max={today} onChange={(e) => setStartedOn(e.target.value)} required />
@@ -249,11 +276,16 @@ export function GameDiary({ game, released }: { game: Game; released: boolean })
       {sessions.length ? (
         <ul className="mb-4 space-y-2">
           {sessions.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-bg-subtle px-3 py-2 text-sm">
+            <li key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-bg-subtle px-3 py-2 text-sm">
               <span className="font-medium">{SESSION_KIND_LABEL[s.kind]}</span>
               <span className="text-muted">
                 {formatDate(s.startedOn)} → {s.finishedOn ? formatDate(s.finishedOn) : "in progress"}
               </span>
+              {s.platform || s.hours != null ? (
+                <span className="text-faint">
+                  {[s.platform, s.hours != null ? `${s.hours} h` : null].filter(Boolean).join(" · ")}
+                </span>
+              ) : null}
               {s.note ? <span className="hidden truncate text-faint sm:inline">“{s.note}”</span> : null}
               <span className="ml-auto">
                 <ConfirmButton prompt="Delete entry?" onConfirm={async () => {

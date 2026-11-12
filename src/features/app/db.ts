@@ -58,6 +58,8 @@ interface PlaySessionRow {
   started_on: string;
   finished_on: string | null;
   note: string;
+  hours?: number | string | null;
+  platform?: string | null;
   created_at: string;
 }
 interface ListRow {
@@ -139,6 +141,8 @@ export const toPlaySession = (r: PlaySessionRow): PlaySession => ({
   startedOn: r.started_on,
   finishedOn: r.finished_on,
   note: r.note,
+  hours: r.hours == null ? null : Number(r.hours),
+  platform: r.platform ?? null,
   createdAt: r.created_at,
 });
 
@@ -377,7 +381,7 @@ export async function loadUser(db: SupabaseClient, username: string): Promise<(P
   const [library, reviews, sessions, lists, favorites, follows] = await Promise.all([
     db.from("user_games").select("*").eq("user_id", id),
     db.from("reviews").select("*").eq("user_id", id),
-    db.from("play_sessions").select("*").eq("user_id", id).order("started_on", { ascending: false }).limit(50),
+    db.from("play_sessions").select("*").eq("user_id", id).order("started_on", { ascending: false }).limit(2000),
     db.from("lists").select(LIST_SELECT).eq("user_id", id),
     db.from("user_favorite_games").select("*").eq("user_id", id),
     db.from("follows").select("*").or(`follower_id.eq.${id},following_id.eq.${id}`),
@@ -455,6 +459,8 @@ export const write = {
         started_on: p.startedOn,
         finished_on: p.finishedOn,
         note: p.note,
+        hours: p.hours ?? null,
+        platform: p.platform ?? null,
       }),
     );
   },

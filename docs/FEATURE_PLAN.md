@@ -103,8 +103,8 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 5 — Estatísticas
 
-- [ ] **S2. Diário mais completo:** horas jogadas e plataforma em cada registro, mais uma visão de calendário do diário.
-- [ ] **S3. Estatísticas e Retrospectiva do ano**
+- [x] **S2. Diário mais completo:** horas jogadas e plataforma em cada registro, mais uma visão de calendário do diário.
+- [x] **S3. Estatísticas e Retrospectiva do ano**
   - Jogos zerados por mês, gêneros e plataformas favoritas, média das suas notas.
   - Página de retrospectiva compartilhável no fim do ano.
 
