@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-/** Supabox wordmark: a stacked "box" mark plus the name. Original artwork. */
+/**
+ * Supabox brand mark: the S-shaped box (raster artwork with transparency).
+ * Source files: public/brand. Keep proportions; never place it on an added background.
+ */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 32 32" className={cn("h-7 w-7", className)} aria-hidden>
-      <rect x="3" y="3" width="26" height="26" rx="7" fill="var(--color-accent)" />
-      <rect x="9" y="9" width="14" height="5" rx="2" fill="var(--color-accent-fg)" />
-      <rect x="9" y="18" width="9" height="5" rx="2" fill="var(--color-accent-fg)" opacity="0.55" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element -- tiny static asset; srcSet covers retina screens
+    <img
+      src="/brand/supabox-mark-64.png"
+      srcSet="/brand/supabox-mark-64.png 1x, /brand/supabox-mark-128.png 2x, /brand/supabox-mark-256.png 4x"
+      alt=""
+      aria-hidden
+      width={28}
+      height={28}
+      className={cn("h-7 w-7 shrink-0 object-contain", className)}
+    />
   );
 }
 

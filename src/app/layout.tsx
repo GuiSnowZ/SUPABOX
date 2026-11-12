@@ -5,16 +5,30 @@ import { SignInPrompt, Toaster } from "@/components/layout/overlays";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StoreStarter } from "@/components/layout/store-starter";
+import { ALLOW_INDEXING, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
+const DESCRIPTION =
+  "Supabox is a social diary for video games. Track what you play, rate and review games, build lists and see what your friends are playing.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: "Supabox — Your games. Your story.", template: "%s · Supabox" },
-  description:
-    "Supabox is a social diary for video games. Track what you play, rate and review games, build lists and see what your friends are playing.",
+  description: DESCRIPTION,
   applicationName: "Supabox",
+  openGraph: {
+    type: "website",
+    siteName: "Supabox",
+    title: "Supabox — Your games. Your story.",
+    description: DESCRIPTION,
+    images: [{ url: "/brand/supabox-icon-1024.png", width: 1024, height: 1024, alt: "Supabox" }],
+  },
+  twitter: { card: "summary", images: ["/brand/supabox-icon-1024.png"] },
+  // Pre-launch: keep the site out of search results until NEXT_PUBLIC_ALLOW_INDEXING=true.
+  robots: ALLOW_INDEXING ? undefined : { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
