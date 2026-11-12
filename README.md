@@ -1,6 +1,6 @@
 # Supabox
 
-**Your games. Your story.** A social diary for video games. Track what you play, rate and review games, build lists and see what your friends are playing.
+**Your games. Your story.** A social diary for video games. Live (private beta): **https://supaboxd.com**. Track what you play, rate and review games, build lists and see what your friends are playing.
 
 > **Status: Phase 3 — real game catalog.** Accounts and all user data are saved in Supabase (PostgreSQL with Row Level Security). Game data, covers and logos come from [IGDB](https://www.igdb.com): about 9.5k games are synced, and any other game is imported on demand.
 
@@ -43,6 +43,14 @@ Requirements: Node.js 20.9 or later (developed on Node 24 LTS), npm and a Supaba
 | `/library`, `/library/wishlist` | Personal library and wishlist |
 | `/sign-in`, `/sign-up`, `/forgot-password`, `/account/password` | Authentication |
 | `/auth/confirm` | Handles links from auth emails |
+
+## Deployment
+
+- **Hosting:** Vercel project `supabox` (Hobby plan), connected to this GitHub repository. Every push to `main` deploys to production automatically.
+- **Domain:** `supaboxd.com` (registered at Wix; its DNS has an A record pointing to Vercel at `216.198.79.1`). `www.supaboxd.com` permanently redirects to it. Vercel issues the HTTPS certificates.
+- **Environment variables:** set in Vercel → Project → Settings → Environment Variables (the same names as `.env.example`). Set `NEXT_PUBLIC_ALLOW_INDEXING=true` and redeploy to let search engines index the site.
+- **Supabase Auth:** Site URL `https://supaboxd.com`. Allowed redirect URLs: localhost, supaboxd.com and the Vercel address.
+- **Catalog refresh:** GitHub Actions runs it daily (`.github/workflows/catalog-sync.yml`).
 
 ## Docs
 

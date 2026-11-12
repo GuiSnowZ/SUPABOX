@@ -65,7 +65,16 @@ Mock data only. No Supabase, real auth or external APIs.
 - [ ] pt-BR translation
 
 ## Phase 6 — Launch
-- [ ] Production deploy on Vercel (with your approval), domain, privacy policy and terms (LGPD), monitoring and error reporting
+- [x] Production deploy on Vercel (approved 2026-11-11) at https://supaboxd.com, with HTTPS and a www redirect
+- [x] Brand assets: logo, favicon, app icons, social share image
+- [x] Hidden from search engines until launch (`NEXT_PUBLIC_ALLOW_INDEXING`)
+- [ ] Custom SMTP for auth emails (Supabase's built-in email sends only a few per hour)
+- [ ] Privacy policy and terms (LGPD), cookie notice if needed
+- [ ] Rotate the Supabase secret key and the Twitch secret (both were shared in chat)
+- [ ] IGDB commercial partnership (partner@igdb.com)
+- [ ] Monitoring and error reporting
+- [ ] Turn on domain auto-renew at Wix
+- [ ] Move to Vercel Pro before any monetization (Hobby is non-commercial)
 - [ ] Plan the Expo mobile apps
 
 ## Known limitations
