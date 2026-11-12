@@ -54,7 +54,9 @@ Mock data only. No Supabase, real auth or external APIs.
 - [x] IGDB attribution in the footer
 - [ ] Email partner@igdb.com for the commercial partnership (before launch)
 - [x] Daily catalog sync with GitHub Actions (`.github/workflows/catalog-sync.yml`, 06:00 UTC, plus a manual "Run workflow" button)
-- [ ] Filters: genre, platform, release year; pagination for large result sets
+- [x] Critic scores (IGDB aggregate of outlet reviews) on game pages and covers
+- [x] Paginated "New Releases" (last 90 days) and "Coming Soon" (next 12 months) pages, 24 per page, up to 20 pages
+- [ ] Filters: genre, platform, release year
 
 ## Phase 4 — Social experience
 - [ ] Privacy settings (private profiles), blocking, reporting and moderation basics

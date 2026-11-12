@@ -6,7 +6,10 @@ import type { Game } from "@/types";
  * Every title, studio and description is invented. Cover art is generated
  * procedurally from the `cover` parameters (no third-party artwork).
  */
-type Seed = Omit<Game, "id" | "externalRef" | "coverUrl" | "logoUrl" | "backgroundUrl" | "popularity">;
+type Seed = Omit<
+  Game,
+  "id" | "externalRef" | "coverUrl" | "logoUrl" | "backgroundUrl" | "popularity" | "criticScore" | "criticCount"
+>;
 
 const seeds: Seed[] = [
   {
@@ -310,5 +313,7 @@ export const games: Game[] = seeds.map((g, i) => ({
   logoUrl: null,
   backgroundUrl: null,
   popularity: 0,
+  criticScore: null,
+  criticCount: 0,
   externalRef: { provider: "mock", id: String(1000 + i) },
 }));

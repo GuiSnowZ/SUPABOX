@@ -21,6 +21,9 @@ export interface IgdbGame {
   total_rating_count?: number;
   hypes?: number;
   game_type?: number;
+  /** Average of external critic reviews, 0–100. */
+  aggregated_rating?: number;
+  aggregated_rating_count?: number;
 }
 
 export interface IgdbLogo {
@@ -50,6 +53,8 @@ export const GAME_FIELDS = [
   "total_rating_count",
   "hypes",
   "game_type",
+  "aggregated_rating",
+  "aggregated_rating_count",
 ].join(",");
 
 /** Main games, remakes, remasters and expanded editions — not DLC, bundles, mods or seasons. */
@@ -161,9 +166,20 @@ export interface GameRow {
   logo_url: string | null;
   background_url: string | null;
   popularity: number;
+  critic_score: number | null;
+  critic_count: number;
   provider: "igdb";
   provider_id: string;
   provider_synced_at: string;
+}
+
+/** Critic score rounded to 0–100; null when IGDB has no critic reviews. */
+export function criticScore(g: Pick<IgdbGame, "aggregated_rating" | "aggregated_rating_count">) {
+  const score = g.aggregated_rating;
+  if (score == null || !Number.isFinite(score) || !g.aggregated_rating_count) {
+    return { critic_score: null, critic_count: 0 };
+  }
+  return { critic_score: Math.max(0, Math.min(100, Math.round(score))), critic_count: g.aggregated_rating_count };
 }
 
 export function toGameRow(g: IgdbGame, logo?: IgdbLogo, now = new Date().toISOString()): GameRow {
@@ -186,6 +202,7 @@ export function toGameRow(g: IgdbGame, logo?: IgdbLogo, now = new Date().toISOSt
     logo_url: logo ? igdbImageUrl(logo.image_id, "logo_med", "png") : null,
     background_url: background ? igdbImageUrl(background, "1080p") : null,
     popularity: Math.round((g.total_rating_count ?? 0) + (g.hypes ?? 0)),
+    ...criticScore(g),
     provider: "igdb",
     provider_id: String(g.id),
     provider_synced_at: now,

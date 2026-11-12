@@ -17,6 +17,8 @@ describe("IGDB mapping", () => {
     total_rating_count: 8,
     hypes: 227,
     game_type: 0,
+    aggregated_rating: 87.6,
+    aggregated_rating_count: 2,
   };
 
   it("maps a full IGDB game to a games row", () => {
@@ -33,6 +35,8 @@ describe("IGDB mapping", () => {
       logo_url: "https://images.igdb.com/igdb/image/upload/t_logo_med/logo1.png",
       background_url: "https://images.igdb.com/igdb/image/upload/t_1080p/ar6eyx.jpg",
       popularity: 235,
+      critic_score: 88,
+      critic_count: 2,
       provider: "igdb",
       provider_id: "250618",
     });
@@ -47,6 +51,8 @@ describe("IGDB mapping", () => {
     expect(row.developer).toBeNull();
     expect(row.platforms).toEqual([]);
     expect(row.popularity).toBe(0);
+    expect(row.critic_score).toBeNull();
+    expect(row.critic_count).toBe(0);
   });
 
   it("orders platforms by importance and de-duplicates", () => {

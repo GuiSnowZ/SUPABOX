@@ -61,3 +61,9 @@ Covers, logos and artwork use IGDB's pre-sized image URLs in plain `<img>` tags 
 
 ### D-020 — Recently Released ranks by popularity, not date (2026-11-10)
 Ordering strictly by date filled the section with small titles released that day. At your request, the section now shows the biggest releases of the last 60 days, most popular first (IGDB rating count plus hype; wider windows if there are too few). Coming Soon picks the most anticipated games of the next six months and shows them soonest first. Popularity stays current only while the catalog sync runs, which is why scheduling the sync is on the roadmap.
+
+### D-021 — Critic scores come from IGDB, not Metacritic (2026-11-11)
+Metacritic has no public API, and copying its scores would break its terms. IGDB's `aggregated_rating` (an average of professional outlet reviews) is part of the catalog we're already allowed to use. It's shown as "Critic score" with the number of reviews behind it, next to Supabox's own player rating. About half the catalog has one; unreleased games never do.
+
+### D-022 — Paginated browsing with shareable URLs (2026-11-11)
+`/games/new-releases` and `/games/coming-soon` use `?page=N` links (24 games per page, capped at 20 pages) rather than infinite scroll. Each page has its own address, the back button works, and pages work without JavaScript. Out-of-range pages redirect to the last page. Both lists are ordered by popularity, per D-020.

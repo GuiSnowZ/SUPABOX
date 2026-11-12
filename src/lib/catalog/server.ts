@@ -76,6 +76,84 @@ export async function getUpcoming(limit = 12): Promise<Game[]> {
     .sort((a, b) => (a.releaseDate ?? "").localeCompare(b.releaseDate ?? ""));
 }
 
+export const PAGE_SIZE = 24;
+export const MAX_PAGES = 20;
+
+export interface GamePage {
+  games: Game[];
+  page: number;
+  /** Total pages available (capped at MAX_PAGES). */
+  pages: number;
+  total: number;
+}
+
+function clampPage(page: number) {
+  return Number.isFinite(page) ? Math.min(MAX_PAGES, Math.max(1, Math.floor(page))) : 1;
+}
+
+type GameQuery = ReturnType<ReturnType<typeof db>["from"]>;
+
+/**
+ * Run a filtered games query one page at a time. PostgREST answers
+ * "range not satisfiable" (PGRST103) for pages past the end, so in that case
+ * we only count the rows and return an empty page (the route then redirects).
+ */
+async function pagedGames(
+  pageNumber: number,
+  filter: (q: ReturnType<GameQuery["select"]>) => ReturnType<GameQuery["select"]>,
+): Promise<GamePage> {
+  const page = clampPage(pageNumber);
+  const from = (page - 1) * PAGE_SIZE;
+  const pagesFor = (total: number) => Math.min(MAX_PAGES, Math.max(1, Math.ceil(total / PAGE_SIZE)));
+  const { data, error, count } = await filter(db().from("games").select(GAME_COLUMNS, { count: "exact" })).range(
+    from,
+    from + PAGE_SIZE - 1,
+  );
+  if (error?.code === "PGRST103") {
+    const head = await filter(db().from("games").select("id", { count: "exact", head: true }));
+    if (head.error) throw new Error(head.error.message);
+    const total = head.count ?? 0;
+    return { games: [], page, total, pages: pagesFor(total) };
+  }
+  if (error) throw new Error(error.message);
+  const total = count ?? 0;
+  return { games: (data as unknown as GameDbRow[]).map(toGame), page, total, pages: pagesFor(total) };
+}
+
+/** All new releases of the last 90 days, biggest first, one page at a time. */
+export async function getNewReleasesPage(pageNumber: number): Promise<GamePage> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("games");
+  return pagedGames(pageNumber, (q) =>
+    q
+      .lte("release_date", todayIso())
+      .gte("release_date", daysFromNow(-90))
+      .gte("popularity", MIN_RECENT_POPULARITY)
+      .not("cover_url", "is", null)
+      .order("popularity", { ascending: false })
+      .order("release_date", { ascending: false })
+      .order("id", { ascending: true }),
+  );
+}
+
+/** Games releasing in the next 12 months, most anticipated first, one page at a time. */
+export async function getComingSoonPage(pageNumber: number): Promise<GamePage> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("games");
+  return pagedGames(pageNumber, (q) =>
+    q
+      .gt("release_date", todayIso())
+      .lte("release_date", daysFromNow(365))
+      .gte("popularity", MIN_RECENT_POPULARITY)
+      .not("cover_url", "is", null)
+      .order("popularity", { ascending: false })
+      .order("release_date", { ascending: true })
+      .order("id", { ascending: true }),
+  );
+}
+
 async function findBySlug(slug: string): Promise<Game | null> {
   const { data, error } = await db().from("games").select(GAME_COLUMNS).eq("slug", slug).maybeSingle();
   if (error) throw new Error(error.message);

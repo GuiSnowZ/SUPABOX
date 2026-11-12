@@ -44,6 +44,10 @@ export interface Game {
   backgroundUrl: string | null;
   /** Provider popularity signal (ratings + hype), used for ranking. */
   popularity: number;
+  /** Average professional critic score, 0–100 (from IGDB), or null if unreviewed. */
+  criticScore: number | null;
+  /** Number of critic reviews behind criticScore. */
+  criticCount: number;
   /** Placeholder art parameters (fictional prototype games only). */
   cover?: CoverArt;
   /** Identifier at the external catalog provider (IGDB etc.). */

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn, formatReleaseDate } from "@/lib/utils";
 import type { Game } from "@/types";
+import { CriticScore } from "./critic-score";
 import { GameCover } from "./game-cover";
 import { WishlistButton } from "./wishlist-button";
 
@@ -38,11 +39,12 @@ export function GameCard({
         href={`/games/${game.slug}`}
         className="block rounded-[var(--radius-cover)] focus-visible:outline-offset-4"
       >
-        <div className="transition-transform duration-200 group-hover:-translate-y-0.5">
+        <div className="relative transition-transform duration-200 group-hover:-translate-y-0.5">
           <GameCover
             game={game}
             className="transition-shadow duration-200 group-hover:ring-2 group-hover:ring-accent/60"
           />
+          {showMeta ? <CriticScore game={game} className="absolute bottom-2 left-2" /> : null}
         </div>
         {showMeta ? (
           <div className="mt-2.5 min-w-0">

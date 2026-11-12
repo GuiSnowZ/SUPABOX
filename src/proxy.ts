@@ -7,9 +7,12 @@ import { isSupabaseConfigured, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase
  * Game pages stream, so a missing game can't change the HTTP status from inside
  * the page. Unknown slugs are answered with a real 404 here instead.
  */
+/** Fixed pages under /games/ that are not game slugs. */
+const GAME_SECTION_PAGES = new Set(["new-releases", "coming-soon"]);
+
 async function unknownGame(pathname: string): Promise<boolean> {
   const m = /^\/games\/([^/]+)\/?$/.exec(pathname);
-  if (!m) return false;
+  if (!m || GAME_SECTION_PAGES.has(m[1])) return false;
   let slug: string;
   try {
     slug = decodeURIComponent(m[1]);

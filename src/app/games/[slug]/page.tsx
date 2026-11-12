@@ -10,6 +10,7 @@ import {
   GameReviews,
 } from "@/components/games/game-user-panel";
 import { Badge, Container } from "@/components/ui/primitives";
+import { CriticScore } from "@/components/games/critic-score";
 import { RegisterGames } from "@/components/games/register-games";
 import { isReleasedOn, todayIso } from "@/lib/catalog/rows";
 import { resolveGameBySlug } from "@/lib/catalog/server";
@@ -79,7 +80,7 @@ function GameDetails({ game }: { game: Game }) {
             </div>
             {game.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- IGDB serves pre-sized images
-              <img src={game.logoUrl} alt="" aria-hidden className="mt-4 max-h-20 max-w-[280px] object-contain object-left" />
+              <img src={game.logoUrl} alt="" aria-hidden className="mt-4 max-h-20 max-w-[280px] object-contain object-left [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.85))_drop-shadow(0_0_10px_rgba(255,255,255,0.18))]" />
             ) : null}
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{game.title}</h1>
             <p className="mt-2 text-muted">
@@ -87,6 +88,7 @@ function GameDetails({ game }: { game: Game }) {
               <span className="text-faint"> · </span>
               by <span className="text-fg">{game.developer}</span>
             </p>
+            {game.criticScore !== null ? <CriticScore game={game} variant="full" className="mt-5" /> : null}
             {game.description && game.description !== game.summary ? (
               <p className="mt-6 leading-relaxed whitespace-pre-line text-fg/85">{game.description}</p>
             ) : game.summary ? (
