@@ -21,7 +21,7 @@ import {
 } from "@/features/app/selectors";
 import { actions, getAppState, loaders, registerGames, useAppState, useLoad } from "@/features/app/store";
 import { changeLibraryStatus } from "@/features/app/library-actions";
-import { promptSignIn, toast } from "@/features/app/ui-store";
+import { openReviewPrompt, promptSignIn, toast } from "@/features/app/ui-store";
 import { LIBRARY_STATUSES, SESSION_KIND_LABEL, STATUS_LABEL } from "@/lib/library";
 import { formatRating } from "@/lib/ratings";
 import { cn, formatDate, pluralize } from "@/lib/utils";
@@ -99,21 +99,37 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
   );
 }
 
+type QuickStage = "just_started" | "playing" | "completed_today";
+
+const QUICK_STAGES: ReadonlyArray<readonly [QuickStage, string, string]> = [
+  ["just_started", "Just started", "Starting today"],
+  ["playing", "Playing", "Started earlier"],
+  ["completed_today", "Completed today", "Finished it"],
+];
+
+/** Today's date in the visitor's own time zone (YYYY-MM-DD), not UTC. */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /**
- * The Diary form. In `quick` mode (the "+" quick add) it asks whether you just
- * started or are already playing, hides the finish date, and also sets the
- * game's library status to Playing.
+ * The Diary form. In `quick` mode (the "+" quick add) it asks where you are
+ * with the game: just started / playing (status Playing, no finish date) or
+ * completed today (finish date today, status Completed, then the rate-and-review
+ * prompt opens).
  */
 export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone: () => void; quick?: boolean }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const [kind, setKind] = useState<PlaySessionKind>("first_playthrough");
-  const [stage, setStage] = useState<"just_started" | "playing">("just_started");
+  const [stage, setStage] = useState<QuickStage>("just_started");
   const [startedOn, setStartedOn] = useState(today);
   const [finishedOn, setFinishedOn] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const showStart = !quick || stage === "playing";
+  const showStart = !quick || stage !== "just_started";
+  const completing = quick && stage === "completed_today";
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -123,7 +139,7 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       gameId: game.id,
       kind,
       startedOn: quick && stage === "just_started" ? today : startedOn,
-      finishedOn: quick ? null : finishedOn || null,
+      finishedOn: quick ? (completing ? today : null) : finishedOn || null,
       note,
     });
     if (!r.ok) {
@@ -131,15 +147,22 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       return setError(r.error);
     }
     if (quick) {
+      const target = completing ? "completed" : "playing";
       const state = getAppState();
-      if (getUserGame(state, state.currentUserId, game.id)?.status !== "playing") {
-        const s = await actions.setLibraryStatus(game.id, "playing");
+      const before = getUserGame(state, state.currentUserId, game.id)?.status;
+      if (before !== target) {
+        const s = await actions.setLibraryStatus(game.id, target);
         if (!s.ok) {
           setPending(false);
           return setError(s.error);
         }
       }
-      toast(`${game.title} added to your diary as Playing`);
+      setPending(false);
+      onDone();
+      // Finishing a game asks for a rating and review, like everywhere else.
+      if (completing) openReviewPrompt(game.id);
+      else toast(`${game.title} added to your diary as Playing`);
+      return;
     } else {
       toast("Added to your diary");
     }
@@ -152,17 +175,12 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       {quick ? (
         <fieldset className="sm:col-span-2">
           <legend className="mb-1.5 text-sm font-medium text-fg">Where are you?</legend>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                ["just_started", "Just started", "Starting it today"],
-                ["playing", "Already playing", "Started a while ago"],
-              ] as const
-            ).map(([value, label, hint]) => (
+          <div className="grid grid-cols-3 gap-2">
+            {QUICK_STAGES.map(([value, label, hint]) => (
               <label
                 key={value}
                 className={cn(
-                  "cursor-pointer rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                  "cursor-pointer rounded-lg border px-2.5 py-2.5 text-sm leading-tight transition-colors",
                   stage === value ? "border-accent bg-accent/10 text-fg" : "border-border text-muted hover:border-border-strong",
                 )}
               >
@@ -175,7 +193,7 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
                   className="sr-only"
                 />
                 <span className="block font-medium">{label}</span>
-                <span className="block text-xs text-faint">{hint}</span>
+                <span className="mt-0.5 block text-xs text-faint">{hint}</span>
               </label>
             ))}
           </div>
@@ -207,7 +225,7 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
         <FormError>{error}</FormError>
         <div className="mt-2 flex gap-2">
           <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : quick ? "Add to my diary" : "Save entry"}
+            {pending ? "Saving…" : completing ? "Save and rate it" : quick ? "Add to my diary" : "Save entry"}
           </Button>
           <Button variant="ghost" onClick={onDone}>
             Cancel
