@@ -75,7 +75,7 @@ Mock data only. No Supabase, real auth or external APIs.
 - [x] Self-service "Download my data" and "Delete my account" (LGPD/GDPR)
 - [ ] Inbound email for privacy@supaboxd.com (forwarding)
 - [ ] Legal review of the policy and terms before a large public launch
-- [ ] Rotate the Supabase secret key and the Twitch secret (both were shared in chat)
+- [x] Rotated the Supabase secret key and the Twitch secret (2026-11-12); new values only in .env.local, Vercel and GitHub secrets
 - [ ] IGDB commercial partnership (partner@igdb.com)
 - [ ] Monitoring and error reporting
 - [ ] Turn on domain auto-renew at Wix
