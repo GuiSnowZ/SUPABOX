@@ -70,8 +70,11 @@ Mock data only. No Supabase, real auth or external APIs.
 - [x] Production deploy on Vercel (approved 2026-11-11) at https://supaboxd.com, with HTTPS and a www redirect
 - [x] Brand assets: logo, favicon, app icons, social share image
 - [x] Hidden from search engines until launch (`NEXT_PUBLIC_ALLOW_INDEXING`)
-- [ ] Custom SMTP for auth emails (Supabase's built-in email sends only a few per hour)
-- [ ] Privacy policy and terms (LGPD), cookie notice if needed
+- [x] Custom SMTP: Supabase Auth sends through Resend as noreply@supaboxd.com (DKIM, SPF and DMARC records at Wix)
+- [x] Privacy Policy (/privacy) and Terms (/terms); consent line on sign-up; no cookie banner needed (essential cookies only)
+- [x] Self-service "Download my data" and "Delete my account" (LGPD/GDPR)
+- [ ] Inbound email for privacy@supaboxd.com (forwarding)
+- [ ] Legal review of the policy and terms before a large public launch
 - [ ] Rotate the Supabase secret key and the Twitch secret (both were shared in chat)
 - [ ] IGDB commercial partnership (partner@igdb.com)
 - [ ] Monitoring and error reporting
