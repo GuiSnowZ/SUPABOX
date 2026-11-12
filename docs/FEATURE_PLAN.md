@@ -34,19 +34,19 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 2 — Núcleo de jogo e perfil
 
-- [ ] **14. Ao marcar "Zerado", abrir modal de nota + review**
+- [x] **14. Ao marcar "Zerado", abrir modal de nota + review**
   - Um único modal reaproveitando estrelas e review.
   - Funciona em qualquer lugar onde dá para marcar "Zerado".
-- [ ] **8. Favoritos só com jogos zerados e com nota**
+- [x] **8. Favoritos só com jogos zerados e com nota**
   - Modal com busca que mostra apenas jogos da sua biblioteca com status Zerado e nota dada.
   - O banco também passa a recusar favoritos que não cumpram isso.
-- [ ] **9. Ordenar e filtrar jogos avaliados** no seu perfil e no de outras pessoas.
+- [x] **9. Ordenar e filtrar jogos avaliados** no seu perfil e no de outras pessoas.
   - Ordens: avaliado recentemente, lançamento mais recente, A–Z, maior nota, menor nota, nota da crítica.
   - Filtros: nota, plataforma, gênero.
-- [ ] **15. Botão "+" de adicionar rápido**
+- [x] **15. Botão "+" de adicionar rápido**
   - Aparece em dois lugares só: no centro da barra inferior do celular e no topo da Home.
   - Fluxo: buscar o jogo → abre o formulário do Diário existente → "Comecei agora" ou "Estou jogando" → salva no perfil.
-- [ ] **5. Foto de perfil**
+- [x] **5. Foto de perfil**
   - Upload com corte quadrado e redução de tamanho, salvo no Supabase Storage com acesso só do dono.
   - Aparece no perfil, cabeçalho, reviews, feed, listas e seguidores.
   - Hoje o avatar é uma cor; ela continua como fallback.

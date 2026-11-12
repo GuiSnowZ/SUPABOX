@@ -19,7 +19,8 @@ import {
   getUserGame,
   getUserReview,
 } from "@/features/app/selectors";
-import { actions, loaders, registerGames, useAppState, useLoad } from "@/features/app/store";
+import { actions, getAppState, loaders, registerGames, useAppState, useLoad } from "@/features/app/store";
+import { changeLibraryStatus } from "@/features/app/library-actions";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { LIBRARY_STATUSES, SESSION_KIND_LABEL, STATUS_LABEL } from "@/lib/library";
 import { formatRating } from "@/lib/ratings";
@@ -68,10 +69,7 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
 
   async function setStatus(status: LibraryStatus | null) {
     if (!userId) return promptSignIn(`Sign in to add ${game.title} to your library.`);
-    registerGames([game]);
-    const r = await actions.setLibraryStatus(game.id, status);
-    if (!r.ok) return toast(r.error, "error");
-    toast(status ? `Marked as ${STATUS_LABEL[status]}` : `Removed ${game.title} from your library`);
+    await changeLibraryStatus(game, status);
   }
 
   return (
@@ -101,24 +99,88 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
   );
 }
 
-function DiaryForm({ game, onDone }: { game: Game; onDone: () => void }) {
+/**
+ * The Diary form. In `quick` mode (the "+" quick add) it asks whether you just
+ * started or are already playing, hides the finish date, and also sets the
+ * game's library status to Playing.
+ */
+export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone: () => void; quick?: boolean }) {
   const today = new Date().toISOString().slice(0, 10);
   const [kind, setKind] = useState<PlaySessionKind>("first_playthrough");
+  const [stage, setStage] = useState<"just_started" | "playing">("just_started");
   const [startedOn, setStartedOn] = useState(today);
   const [finishedOn, setFinishedOn] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const showStart = !quick || stage === "playing";
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const r = await actions.logPlaySession({ gameId: game.id, kind, startedOn, finishedOn: finishedOn || null, note });
-    if (!r.ok) return setError(r.error);
-    toast("Added to your diary");
+    setPending(true);
+    registerGames([game]);
+    const r = await actions.logPlaySession({
+      gameId: game.id,
+      kind,
+      startedOn: quick && stage === "just_started" ? today : startedOn,
+      finishedOn: quick ? null : finishedOn || null,
+      note,
+    });
+    if (!r.ok) {
+      setPending(false);
+      return setError(r.error);
+    }
+    if (quick) {
+      const state = getAppState();
+      if (getUserGame(state, state.currentUserId, game.id)?.status !== "playing") {
+        const s = await actions.setLibraryStatus(game.id, "playing");
+        if (!s.ok) {
+          setPending(false);
+          return setError(s.error);
+        }
+      }
+      toast(`${game.title} added to your diary as Playing`);
+    } else {
+      toast("Added to your diary");
+    }
+    setPending(false);
     onDone();
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
+      {quick ? (
+        <fieldset className="sm:col-span-2">
+          <legend className="mb-1.5 text-sm font-medium text-fg">Where are you?</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["just_started", "Just started", "Starting it today"],
+                ["playing", "Already playing", "Started a while ago"],
+              ] as const
+            ).map(([value, label, hint]) => (
+              <label
+                key={value}
+                className={cn(
+                  "cursor-pointer rounded-lg border px-3 py-2.5 text-sm transition-colors",
+                  stage === value ? "border-accent bg-accent/10 text-fg" : "border-border text-muted hover:border-border-strong",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="diary-stage"
+                  value={value}
+                  checked={stage === value}
+                  onChange={() => setStage(value)}
+                  className="sr-only"
+                />
+                <span className="block font-medium">{label}</span>
+                <span className="block text-xs text-faint">{hint}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       <Field label="Type" htmlFor="diary-kind">
         <Select id="diary-kind" value={kind} onChange={(e) => setKind(e.target.value as PlaySessionKind)}>
           {Object.entries(SESSION_KIND_LABEL).map(([k, label]) => (
@@ -131,16 +193,22 @@ function DiaryForm({ game, onDone }: { game: Game; onDone: () => void }) {
       <Field label="Note" htmlFor="diary-note">
         <Input id="diary-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Optional" />
       </Field>
-      <Field label="Started" htmlFor="diary-start">
-        <Input id="diary-start" type="date" value={startedOn} max={today} onChange={(e) => setStartedOn(e.target.value)} required />
-      </Field>
-      <Field label="Finished" htmlFor="diary-end" hint="Leave empty if you're still playing.">
-        <Input id="diary-end" type="date" value={finishedOn} min={startedOn} onChange={(e) => setFinishedOn(e.target.value)} />
-      </Field>
+      {showStart ? (
+        <Field label="Started" htmlFor="diary-start">
+          <Input id="diary-start" type="date" value={startedOn} max={today} onChange={(e) => setStartedOn(e.target.value)} required />
+        </Field>
+      ) : null}
+      {!quick ? (
+        <Field label="Finished" htmlFor="diary-end" hint="Leave empty if you're still playing.">
+          <Input id="diary-end" type="date" value={finishedOn} min={startedOn} onChange={(e) => setFinishedOn(e.target.value)} />
+        </Field>
+      ) : null}
       <div className="sm:col-span-2">
         <FormError>{error}</FormError>
         <div className="mt-2 flex gap-2">
-          <Button type="submit">Save entry</Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Saving…" : quick ? "Add to my diary" : "Save entry"}
+          </Button>
           <Button variant="ghost" onClick={onDone}>
             Cancel
           </Button>

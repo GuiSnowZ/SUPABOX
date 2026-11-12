@@ -61,8 +61,10 @@ export interface Profile {
   username: string;
   displayName: string;
   bio: string;
-  /** Avatar hue used for the generated avatar in the prototype. */
+  /** Hue for the generated initials avatar (used when there's no photo). */
   avatarHue: number;
+  /** Uploaded profile picture (public URL), if any. */
+  avatarUrl?: string | null;
   joinedAt: ISODate;
 }
 

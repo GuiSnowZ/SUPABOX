@@ -172,10 +172,36 @@ describe("lists", () => {
 });
 
 describe("favorites", () => {
+  /** Demo user u1 with the given games completed and rated, and no favorites yet. */
+  function withFinished(ids: string[]) {
+    let s = createDemoState();
+    s = { ...s, favorites: { ...s.favorites, u1: [] } };
+    for (const id of ids) {
+      s = setLibraryStatus(s, id, "completed", NOW);
+      s = upsertReview(s, { gameId: id, rating: 4, body: "", containsSpoilers: false }, NOW);
+    }
+    return s;
+  }
+
   it("keeps order and allows at most five", () => {
-    const s = setFavorites(createDemoState(), [G05, G01, G02]);
+    const s = setFavorites(withFinished([G01, G02, G03, G04, G05, G06]), [G05, G01, G02]);
     expect(s.favorites.u1).toEqual([G05, G01, G02]);
     expect(() => setFavorites(s, [G01, G02, G03, G04, G05, G06])).toThrow(/up to 5/);
+  });
+
+  it("only accepts games that are completed and rated", () => {
+    let s = withFinished([G01]);
+    expect(() => setFavorites(s, [G02])).toThrow(/completed and rated/);
+    s = setLibraryStatus(s, G02, "completed", NOW);
+    expect(() => setFavorites(s, [G02])).toThrow(/completed and rated/);
+    s = upsertReview(s, { gameId: G02, rating: 3.5, body: "", containsSpoilers: false }, NOW);
+    expect(setFavorites(s, [G02, G01]).favorites.u1).toEqual([G02, G01]);
+  });
+
+  it("keeps favorites saved before the rule when reordering", () => {
+    let s = withFinished([G01]);
+    s = { ...s, favorites: { ...s.favorites, u1: [G03] } }; // G03 isn't completed/rated
+    expect(setFavorites(s, [G01, G03]).favorites.u1).toEqual([G01, G03]);
   });
 });
 

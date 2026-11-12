@@ -15,7 +15,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { getSupabase } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Follow, Game, GameList, ID, PlaySession, Profile, Review, UserGame } from "@/types";
-import { friendlyError, loadBootstrap, loadGame, loadGames, loadList, loadUser, type Patch, write } from "./db";
+import { avatarPublicUrl, friendlyError, loadBootstrap, loadGame, loadGames, loadList, loadUser, type Patch, write } from "./db";
 import * as t from "./state";
 import { type AppState, createEmptyState, type LoadStatus, PrototypeError } from "./state";
 
@@ -24,6 +24,11 @@ let current: AppState = serverSnapshot;
 const listeners = new Set<() => void>();
 
 function get() {
+  return current;
+}
+
+/** Current state outside React (event handlers that need a fresh snapshot). */
+export function getAppState(): AppState {
   return current;
 }
 
@@ -344,6 +349,17 @@ export const actions = {
       const nowFollowing = next.follows.some((f) => f.followerId === userId && f.followingId === targetId);
       await write.follow(db, userId, targetId, nowFollowing);
     }),
+
+  /** Point the profile at an already-uploaded picture (or remove it with null). */
+  setAvatarPath: (path: string | null) =>
+    mutate(
+      same((s) => {
+        const userId = me(s);
+        const avatarUrl = path ? avatarPublicUrl(path) : null;
+        return { ...s, profiles: s.profiles.map((p) => (p.id === userId ? { ...p, avatarUrl } : p)) };
+      }),
+      (db, _p, next) => write.setAvatarPath(db, me(next), path),
+    ),
 
   updateProfile: (input: t.ProfileInput) =>
     mutate(same((s) => t.updateProfile(s, input)), async (db, _p, next) => {

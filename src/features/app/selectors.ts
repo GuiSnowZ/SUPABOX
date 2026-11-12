@@ -75,6 +75,23 @@ export function getRecentRatings(state: AppState, userId: ID, limit = 8): Review
     .slice(0, limit);
 }
 
+/**
+ * Games the user may add to favorites: marked Completed and given a star
+ * rating (the database enforces the same rule). Most recently rated first.
+ */
+export function getFavoriteEligibleGames(state: AppState, userId: ID): Game[] {
+  const rated = new Map(
+    getReviewsByUser(state, userId)
+      .filter((r) => r.rating !== null)
+      .map((r) => [r.gameId, r.updatedAt]),
+  );
+  return state.userGames
+    .filter((u) => u.userId === userId && u.status === "completed" && rated.has(u.gameId))
+    .sort((a, b) => (rated.get(b.gameId) ?? "").localeCompare(rated.get(a.gameId) ?? ""))
+    .map((u) => state.games[u.gameId])
+    .filter((g): g is Game => Boolean(g));
+}
+
 export function getFollowingIds(state: AppState, userId: ID): ID[] {
   return state.follows.filter((f) => f.followerId === userId).map((f) => f.followingId);
 }

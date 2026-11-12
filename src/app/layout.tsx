@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SignInPrompt, Toaster } from "@/components/layout/overlays";
+import { ReviewPrompt } from "@/components/reviews/review-prompt";
+import { QuickAddDialog } from "@/components/games/quick-add";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { StoreStarter } from "@/components/layout/store-starter";
@@ -55,6 +57,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MobileTabBar />
         <Toaster />
         <SignInPrompt />
+        <ReviewPrompt />
+        <QuickAddDialog />
       </body>
     </html>
   );

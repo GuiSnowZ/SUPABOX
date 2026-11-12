@@ -2,30 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { Fragment, Suspense } from "react";
+import { QuickAddButton } from "@/components/games/quick-add";
 import { cn } from "@/lib/utils";
 import { isActive, PRIMARY_NAV } from "./nav-config";
 
 function Tabs({ pathname }: { pathname: string | null }) {
   return (
-    <ul className="grid grid-cols-4">
-      {PRIMARY_NAV.map((item) => {
+    <ul className="grid grid-cols-5">
+      {PRIMARY_NAV.map((item, i) => {
         const active = isActive(item, pathname);
         const Icon = item.icon;
         return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
-                active ? "text-accent" : "text-muted active:text-fg",
-              )}
-            >
-              <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
-              {item.label}
-            </Link>
-          </li>
+          <Fragment key={item.href}>
+            {i === Math.floor(PRIMARY_NAV.length / 2) ? (
+              <li>
+                <QuickAddButton variant="tab" />
+              </li>
+            ) : null}
+            <li>
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+                  active ? "text-accent" : "text-muted active:text-fg",
+                )}
+              >
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
+                {item.label}
+              </Link>
+            </li>
+          </Fragment>
         );
       })}
     </ul>
@@ -36,7 +44,7 @@ function ActiveTabs() {
   return <Tabs pathname={usePathname()} />;
 }
 
-/** Bottom tab bar for small screens with the same four destinations as the desktop header. */
+/** Bottom tab bar for small screens: the four destinations of the desktop header plus the quick-add "+" in the centre. */
 export function MobileTabBar() {
   return (
     <nav

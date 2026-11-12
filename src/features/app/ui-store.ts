@@ -1,6 +1,6 @@
 "use client";
 
-/** Transient UI state: toasts and the sign-in prompt dialog. */
+/** Transient UI state: toasts and app-wide dialogs (sign-in prompt, review prompt, quick add). */
 import { useSyncExternalStore } from "react";
 
 export interface Toast {
@@ -13,9 +13,13 @@ interface UIState {
   toasts: Toast[];
   /** When set, the sign-in prompt dialog is open with this reason. */
   authPrompt: string | null;
+  /** Game just marked Completed: the "rate and review it" dialog is open for it. */
+  reviewPromptGameId: string | null;
+  /** The quick-add ("+") dialog is open. */
+  quickAddOpen: boolean;
 }
 
-const initial: UIState = { toasts: [], authPrompt: null };
+const initial: UIState = { toasts: [], authPrompt: null, reviewPromptGameId: null, quickAddOpen: false };
 let state = initial;
 let nextId = 1;
 const listeners = new Set<() => void>();
@@ -52,4 +56,20 @@ export function promptSignIn(reason: string) {
 
 export function closeSignInPrompt() {
   set({ ...state, authPrompt: null });
+}
+
+export function openReviewPrompt(gameId: string) {
+  set({ ...state, reviewPromptGameId: gameId });
+}
+
+export function closeReviewPrompt() {
+  set({ ...state, reviewPromptGameId: null });
+}
+
+export function openQuickAdd() {
+  set({ ...state, quickAddOpen: true });
+}
+
+export function closeQuickAdd() {
+  set({ ...state, quickAddOpen: false });
 }

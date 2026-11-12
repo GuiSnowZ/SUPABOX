@@ -9,16 +9,29 @@ const sizes = {
   xl: "h-24 w-24 text-3xl sm:h-28 sm:w-28",
 };
 
-/** Generated initials avatar (prototype). Real uploads arrive with Supabase Storage. */
+/** Profile picture when the user uploaded one; otherwise generated initials on a colour from their profile. */
 export function Avatar({
   profile,
   size = "md",
   className,
 }: {
-  profile: Pick<Profile, "displayName" | "avatarHue">;
+  profile: Pick<Profile, "displayName" | "avatarHue" | "avatarUrl">;
   size?: keyof typeof sizes;
   className?: string;
 }) {
+  if (profile.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- small pre-resized WebP from Supabase Storage
+      <img
+        src={profile.avatarUrl}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        className={cn("inline-block shrink-0 rounded-full bg-surface object-cover ring-1 ring-white/10", sizes[size], className)}
+      />
+    );
+  }
   const initials = profile.displayName
     .split(/\s+/)
     .slice(0, 2)

@@ -1,16 +1,76 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 import { RequireUser } from "@/components/layout/require-user";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Textarea } from "@/components/ui/form";
 import { Container, PageHeader, SectionHeader } from "@/components/ui/primitives";
 import { signOut } from "@/features/app/auth";
+import { removeAvatar, uploadAvatar } from "@/features/app/avatar";
 import { actions } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import type { Profile } from "@/types";
+
+/** Upload, change or remove the profile picture. Saves immediately (separate from the form). */
+function AvatarPicker({ user }: { user: Profile }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState<"upload" | "remove" | null>(null);
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    setPending("upload");
+    const r = await uploadAvatar(file);
+    setPending(null);
+    if (inputRef.current) inputRef.current.value = "";
+    toast(r.ok ? "Profile picture updated" : r.error, r.ok ? "default" : "error");
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative">
+        <Avatar profile={user} size="lg" />
+        {pending ? (
+          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/60">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          id="avatar-file"
+          onChange={(e) => onFile(e.target.files?.[0])}
+          disabled={Boolean(pending)}
+        />
+        <Button variant="secondary" size="sm" onClick={() => inputRef.current?.click()} disabled={Boolean(pending)}>
+          <Camera className="h-4 w-4" /> {user.avatarUrl ? "Change photo" : "Upload photo"}
+        </Button>
+        {user.avatarUrl ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={Boolean(pending)}
+            onClick={async () => {
+              setPending("remove");
+              const r = await removeAvatar();
+              setPending(null);
+              toast(r.ok ? "Profile picture removed" : r.error, r.ok ? "default" : "error");
+            }}
+          >
+            Remove
+          </Button>
+        ) : null}
+        <p className="w-full text-xs text-faint">JPG, PNG or WebP. It&apos;s cropped to a square.</p>
+      </div>
+    </div>
+  );
+}
 
 function Form({ user }: { user: Profile }) {
   const router = useRouter();
@@ -28,10 +88,7 @@ function Form({ user }: { user: Profile }) {
 
   return (
     <form onSubmit={submit} className="max-w-lg space-y-5" noValidate>
-      <div className="flex items-center gap-4">
-        <Avatar profile={{ ...user, displayName: displayName || user.displayName }} size="lg" />
-        <p className="text-sm text-muted">Photo uploads are coming soon.</p>
-      </div>
+      <AvatarPicker user={{ ...user, displayName: displayName || user.displayName }} />
       <Field label="Display name" htmlFor="displayName">
         <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={50} />
       </Field>

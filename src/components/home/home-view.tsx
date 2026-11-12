@@ -3,6 +3,7 @@
 import { BookMarked, CheckCircle2, Gamepad2, ListChecks, NotebookPen, PenLine, PlayCircle, Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { GameCard, GameGrid } from "@/components/games/game-card";
+import { QuickAddButton } from "@/components/games/quick-add";
 import { GameCover } from "@/components/games/game-cover";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { Avatar } from "@/components/ui/avatar";
@@ -143,11 +144,14 @@ export function HomeView({ recent }: { recent: Game[] }) {
       {state.authReady && !signedIn ? <Hero covers={recent} /> : null}
       <Container className="space-y-14 pt-10">
         {me ? (
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Welcome back, {me.displayName.split(" ")[0]}.
-            </h1>
-            <p className="mt-1 text-muted">Here&apos;s what&apos;s happening with you and the people you follow.</p>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Welcome back, {me.displayName.split(" ")[0]}.
+              </h1>
+              <p className="mt-1 text-muted">Here&apos;s what&apos;s happening with you and the people you follow.</p>
+            </div>
+            <QuickAddButton />
           </div>
         ) : null}
 

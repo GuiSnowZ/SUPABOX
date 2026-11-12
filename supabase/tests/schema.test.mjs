@@ -20,6 +20,17 @@ await db.exec(`
   create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   grant usage on schema public, extensions, auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated;
+  -- Minimal stub of Supabase Storage (buckets, objects with RLS, foldername()).
+  create schema storage;
+  create table storage.buckets (id text primary key, name text not null, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id),
+    name text not null, owner uuid);
+  alter table storage.objects enable row level security;
+  create function storage.foldername(name text) returns text[] language sql immutable as
+    $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
 `);
 for (const f of readdirSync(migDir).filter((f) => f.endsWith(".sql")).sort()) {
   await db.exec(readFileSync(join(migDir, f), "utf8"));
@@ -113,13 +124,44 @@ ok("anon cannot call save_list", await fails(null, "select public.save_list(gen_
 await db.exec("update public.lists set featured = true where id = '" + L1 + "'");
 ok("staff (postgres) can feature lists", (await db.query("select featured from public.lists where id = $1", [L1])).rows[0].featured === true);
 
-// Favorites
+// Favorites: only games the user completed AND rated can be added.
+ok("cannot favorite a game you haven't completed and rated", await fails(A, "select public.set_favorite_games($1::uuid[])", [[ids(7)[6]]]));
+for (const g of ids(6)) {
+  await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'completed') on conflict (user_id, game_id) do update set status = 'completed'", [A, g]);
+}
+ok("completed but unrated is still not eligible", await fails(A, "select public.set_favorite_games($1::uuid[])", [[ids(5)[4]]]));
+for (const g of ids(6)) {
+  await as(A, "insert into public.reviews (user_id, game_id, rating) values ($1, $2, 4) on conflict (user_id, game_id) do update set rating = 4", [A, g]);
+}
 await as(A, "select public.set_favorite_games($1::uuid[])", [ids(5)]);
 await as(A, "select public.set_favorite_games($1::uuid[])", [[ids(5)[4], ...ids(4)]]);
 const fav = (await db.query("select game_id from public.user_favorite_games where user_id = $1 order by position", [A])).rows;
 ok("favorites keep order after reorder", fav.length === 5 && fav[0].game_id === ids(5)[4]);
 ok("max five favorites (rpc)", await fails(A, "select public.set_favorite_games($1::uuid[])", [ids(6)]));
-ok("max five favorites (table)", await fails(A, "insert into public.user_favorite_games (user_id, game_id, position) values ($1, $2, 5)", [A, ids(7)[6]]));
+ok("duplicate favorites rejected", await fails(A, "select public.set_favorite_games($1::uuid[])", [[G1, G1]]));
+ok("favorites cannot be inserted directly (bypassing the rules)", await fails(A, "insert into public.user_favorite_games (user_id, game_id, position) values ($1, $2, 4)", [A, ids(7)[6]]));
+ok("anon cannot set favorites", await fails(null, "select public.set_favorite_games($1::uuid[])", [[G1]]));
+// A favorite saved before the rule (grandfathered) can stay when reordering.
+await db.query("update public.reviews set rating = null, body = 'meh' where user_id = $1 and game_id = $2", [A, ids(5)[4]]);
+await as(A, "select public.set_favorite_games($1::uuid[])", [ids(5)]);
+ok("existing favorite that no longer qualifies can be kept/reordered", (await db.query("select count(*)::int n from public.user_favorite_games where user_id = $1", [A])).rows[0].n === 5);
+await as(A, "select public.set_favorite_games($1::uuid[])", [ids(4)]);
+ok("…but once removed it can't be re-added", await fails(A, "select public.set_favorite_games($1::uuid[])", [ids(5)]));
+await as(A, "delete from public.user_favorite_games where user_id = $1", [A]);
+ok("owner can clear favorites directly", (await db.query("select count(*)::int n from public.user_favorite_games where user_id = $1", [A])).rows[0].n === 0);
+
+// Avatars (storage)
+const bucket = (await db.query("select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'")).rows[0];
+ok("avatars bucket is public, small and webp-only", bucket?.public === true && Number(bucket.file_size_limit) === 524288 && bucket.allowed_mime_types.join() === "image/webp");
+await as(A, "insert into storage.objects (bucket_id, name, owner) values ('avatars', $1, $2)", [`${A}/pic-1.webp`, A]);
+ok("user can upload to own avatar folder", (await db.query("select count(*)::int n from storage.objects where name = $1", [`${A}/pic-1.webp`])).rows[0].n === 1);
+ok("user cannot upload into another user's folder", await fails(A, "insert into storage.objects (bucket_id, name, owner) values ('avatars', $1, $2)", [`${B}/x.webp`, A]));
+ok("anon cannot upload avatars", await fails(null, "insert into storage.objects (bucket_id, name) values ('avatars', $1)", [`${A}/y.webp`]));
+ok("user cannot delete another user's avatar", (await as(B, "delete from storage.objects where name = $1 returning id", [`${A}/pic-1.webp`])).rows.length === 0);
+await as(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/pic-1.webp`]);
+ok("profile can point at own avatar", (await db.query("select avatar_path from public.profiles where id = $1", [A])).rows[0].avatar_path === `${A}/pic-1.webp`);
+ok("profile cannot point at someone else's file", await fails(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${B}/x.webp`]));
+ok("profile avatar path must be a webp in the own folder", await fails(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/../evil.png`]));
 
 // Follows
 await as(A, "insert into public.follows (follower_id, following_id) values ($1, $2)", [A, B]);

@@ -7,6 +7,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { GAME_COLUMNS, type GameDbRow, toGame } from "@/lib/catalog/rows";
+import { SUPABASE_URL } from "@/lib/supabase/config";
 import type {
   Activity,
   Follow,
@@ -27,6 +28,7 @@ interface ProfileRow {
   display_name: string;
   bio: string;
   avatar_hue: number;
+  avatar_path?: string | null;
   created_at: string;
 }
 interface UserGameRow {
@@ -94,8 +96,14 @@ export const toProfile = (r: ProfileRow): Profile => ({
   displayName: r.display_name,
   bio: r.bio,
   avatarHue: r.avatar_hue,
+  avatarUrl: r.avatar_path ? avatarPublicUrl(r.avatar_path) : null,
   joinedAt: r.created_at,
 });
+
+/** Public URL of a file in the "avatars" storage bucket. */
+export function avatarPublicUrl(path: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`;
+}
 
 export const toUserGame = (r: UserGameRow): UserGame => ({
   userId: r.user_id,
@@ -408,5 +416,8 @@ export const write = {
   },
   async updateProfile(db: SupabaseClient, id: ID, displayName: string, bio: string) {
     unwrap(await db.from("profiles").update({ display_name: displayName, bio }).eq("id", id));
+  },
+  async setAvatarPath(db: SupabaseClient, id: ID, path: string | null) {
+    unwrap(await db.from("profiles").update({ avatar_path: path }).eq("id", id));
   },
 };

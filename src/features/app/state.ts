@@ -375,6 +375,14 @@ export function setFavorites(state: AppState, gameIds: ID[]): AppState {
   if (unique.length > MAX_FAVORITE_GAMES) {
     throw new PrototypeError(`You can pick up to ${MAX_FAVORITE_GAMES} favorite games.`);
   }
+  // New picks must be completed and rated; favorites saved earlier may stay.
+  const current = new Set(state.favorites[userId] ?? []);
+  const eligible = (gameId: ID) =>
+    state.userGames.some((u) => u.userId === userId && u.gameId === gameId && u.status === "completed") &&
+    state.reviews.some((r) => r.userId === userId && r.gameId === gameId && r.rating !== null);
+  if (unique.some((id) => !current.has(id) && !eligible(id))) {
+    throw new PrototypeError("Favorites must be games you've completed and rated.");
+  }
   return { ...state, favorites: { ...state.favorites, [userId]: unique } };
 }
 

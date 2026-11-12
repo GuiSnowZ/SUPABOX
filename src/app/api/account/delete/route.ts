@@ -6,7 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * POST /api/account/delete { "confirm": "<username>" }
  * Permanently deletes the signed-in user's account. Deleting the auth user
  * cascades to their profile and everything they created (see the schema's
- * ON DELETE CASCADE rules). Requires the same-origin request and the username
+ * ON DELETE CASCADE rules); profile pictures are removed from Storage first. Requires the same-origin request and the username
  * typed as confirmation.
  */
 export async function POST(request: NextRequest) {
@@ -28,6 +28,12 @@ export async function POST(request: NextRequest) {
 
   const admin = getAdminSupabase();
   if (!admin) return NextResponse.json({ error: "Account deletion is unavailable right now." }, { status: 503 });
+  // Profile pictures live in Storage, outside the database cascade: remove them first.
+  const { data: files } = await admin.storage.from("avatars").list(user.id, { limit: 100 });
+  if (files?.length) {
+    const { error: removeError } = await admin.storage.from("avatars").remove(files.map((f) => `${user.id}/${f.name}`));
+    if (removeError) console.error("[account/delete] avatar cleanup", removeError.message);
+  }
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
     console.error("[account/delete]", error.message);

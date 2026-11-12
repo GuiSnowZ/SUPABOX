@@ -3,7 +3,6 @@
 import { BookMarked, Library, ListPlus, Pencil, UserCheck, UserPlus, UserX } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { GameCover } from "@/components/games/game-cover";
 import { GameCard } from "@/components/games/game-card";
 import { ListCard, ListGrid } from "@/components/lists/list-card";
 import { LoadError, PageSkeleton, RequireUser } from "@/components/layout/require-user";
@@ -11,7 +10,6 @@ import { ReviewCard } from "@/components/reviews/review-card";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Container, EmptyState, SectionHeader } from "@/components/ui/primitives";
-import { StarRating } from "@/components/ui/star-rating";
 import {
   getFavoriteGames,
   getFollowerIds,
@@ -20,16 +18,16 @@ import {
   getListsByUser,
   getPlaySessions,
   getProfileByUsername,
-  getRecentRatings,
   getReviewsByUser,
   hasText,
   isFollowing,
 } from "@/features/app/selectors";
 import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
-import { formatDate, formatShortDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import type { Game, Profile } from "@/types";
 import { FavoriteGames } from "./favorite-games";
+import { RatedGames } from "./rated-games";
 
 function Stat({ value, label, href }: { value: number; label: string; href?: string }) {
   const inner = (
@@ -100,7 +98,6 @@ function ProfileContent({ profile }: { profile: Profile }) {
   const isOwner = viewerId === profile.id;
 
   const favorites = getFavoriteGames(state, profile.id);
-  const ratings = getRecentRatings(state, profile.id, 6);
   const reviews = getReviewsByUser(state, profile.id).filter(hasText).slice(0, 3);
   const lists = getListsByUser(state, profile.id, viewerId);
   const library = getLibrary(state, profile.id);
@@ -172,31 +169,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
 
         <FavoriteGames games={favorites} isOwner={isOwner} />
 
-        <section aria-labelledby="ratings-heading">
-          <SectionHeader id="ratings-heading" title="Recent Ratings" />
-          {ratings.length ? (
-            <ul className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-6">
-              {ratings.map((r) => {
-                const g = state.games[r.gameId];
-                if (!g) return null;
-                return (
-                  <li key={r.id}>
-                    <Link href={`/games/${g.slug}`} className="group block">
-                      <GameCover game={g} showTitle={false} className="transition group-hover:ring-2 group-hover:ring-accent/60" />
-                      <p className="mt-2 truncate text-sm font-medium group-hover:text-accent">{g.title}</p>
-                    </Link>
-                    {r.rating !== null ? <StarRating value={r.rating} size="xs" className="mt-1" /> : null}
-                    <p className="mt-0.5 text-xs text-faint">
-                      <time dateTime={r.updatedAt}>{formatShortDate(r.updatedAt)}</time>
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted">No ratings yet.</p>
-          )}
-        </section>
+        <RatedGames userId={profile.id} />
 
         <div className="grid gap-14 lg:grid-cols-2">
           <Section>
