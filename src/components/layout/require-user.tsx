@@ -7,6 +7,7 @@ import { Container, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { useCurrentUser } from "@/features/app/hooks";
 import { loaders, useAppState } from "@/features/app/store";
 import type { Profile } from "@/types";
+import { useT } from "@/i18n/client";
 
 export function PageSkeleton() {
   return (
@@ -23,12 +24,13 @@ export function PageSkeleton() {
 }
 
 export function LoadError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <Container className="py-16">
       <EmptyState
-        title="Couldn't load this page"
-        description="Check your connection and try again."
-        action={<Button onClick={onRetry}>Try again</Button>}
+        title={t.requireUser.loadErrorTitle}
+        description={t.requireUser.loadErrorText}
+        action={<Button onClick={onRetry}>{t.common.tryAgain}</Button>}
       />
     </Container>
   );
@@ -40,11 +42,12 @@ export function LoadError({ onRetry }: { onRetry: () => void }) {
  */
 export function RequireUser({
   children,
-  message = "Sign in to see this page.",
+  message,
 }: {
   children: (user: Profile) => ReactNode;
   message?: string;
 }) {
+  const t = useT();
   const state = useAppState();
   const user = useCurrentUser();
   const boot = state.loads.bootstrap;
@@ -55,9 +58,9 @@ export function RequireUser({
       <Container className="py-16">
         <EmptyState
           icon={<Lock />}
-          title="You're signed out"
-          description={message}
-          action={<ButtonLink href="/sign-in">Sign in</ButtonLink>}
+          title={t.requireUser.signedOutTitle}
+          description={message ?? t.requireUser.defaultMessage}
+          action={<ButtonLink href="/sign-in">{t.common.signIn}</ButtonLink>}
         />
       </Container>
     );

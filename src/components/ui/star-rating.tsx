@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import { type KeyboardEvent, type PointerEvent, useState } from "react";
 import { MAX_RATING, MIN_RATING, RATING_STEP } from "@/lib/ratings";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 const starSizes = { xs: "h-3 w-3", sm: "h-3.5 w-3.5", md: "h-4 w-4", lg: "h-7 w-7" };
 
@@ -56,7 +57,7 @@ export function StarRating({
 export function StarRatingInput({
   value,
   onChange,
-  label = "Your rating",
+  label,
   id,
 }: {
   value: number | null;
@@ -64,6 +65,7 @@ export function StarRatingInput({
   label?: string;
   id?: string;
 }) {
+  const t = useT();
   const [hover, setHover] = useState<number | null>(null);
   const shown = hover ?? value ?? 0;
 
@@ -93,11 +95,11 @@ export function StarRatingInput({
         id={id}
         role="slider"
         tabIndex={0}
-        aria-label={label}
+        aria-label={label ?? t.rating.yourRating}
         aria-valuemin={0}
         aria-valuemax={MAX_RATING}
         aria-valuenow={value ?? 0}
-        aria-valuetext={value ? `${value} out of 5 stars` : "Not rated"}
+        aria-valuetext={value ? t.rating.outOf5(value) : t.rating.notRated}
         onKeyDown={onKeyDown}
         onPointerMove={(e) => e.pointerType === "mouse" && setHover(valueFromPointer(e))}
         onPointerLeave={() => setHover(null)}

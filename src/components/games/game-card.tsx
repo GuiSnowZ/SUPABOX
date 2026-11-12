@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn, formatReleaseDate } from "@/lib/utils";
 import type { Game } from "@/types";
+import { useLocale } from "@/i18n/client";
 import { CriticScore } from "./critic-score";
 import { GameCover } from "./game-cover";
 import { WishlistButton } from "./wishlist-button";
@@ -33,6 +36,7 @@ export function GameCard({
   footer?: ReactNode;
   className?: string;
 }) {
+  const locale = useLocale();
   return (
     <article className={cn("group relative", className)}>
       <Link
@@ -52,7 +56,7 @@ export function GameCard({
               {game.title}
             </h3>
             <p className="mt-0.5 truncate text-xs text-muted">
-              <time dateTime={game.releaseDate ?? undefined}>{formatReleaseDate(game.releaseDate)}</time>
+              <time dateTime={game.releaseDate ?? undefined}>{formatReleaseDate(game.releaseDate, locale)}</time>
               {game.platforms.length ? <span className="text-faint"> · {platformSummary(game.platforms)}</span> : null}
             </p>
           </div>

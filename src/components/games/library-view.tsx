@@ -11,19 +11,20 @@ import { Badge, Container, EmptyState, PageHeader } from "@/components/ui/primit
 import { StarRating } from "@/components/ui/star-rating";
 import { getLibrary, type LibraryEntry } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
-import { LIBRARY_STATUSES, STATUS_LABEL, STATUS_TONE } from "@/lib/library";
-import { cn, pluralize } from "@/lib/utils";
+import { LIBRARY_STATUSES, STATUS_TONE } from "@/lib/library";
+import { useT } from "@/i18n/client";
+import { cn } from "@/lib/utils";
 import type { LibraryStatus, Review } from "@/types";
 
 type Sort = "recent" | "title" | "release_desc" | "release_asc" | "rating";
 
-const SORT_LABEL: Record<Sort, string> = {
-  recent: "Recently updated",
-  title: "Title (A–Z)",
-  release_desc: "Release date (newest)",
-  release_asc: "Release date (oldest)",
-  rating: "Your rating",
-};
+const SORT_KEY = {
+  recent: "sortRecent",
+  title: "sortTitle",
+  release_desc: "sortReleaseDesc",
+  release_asc: "sortReleaseAsc",
+  rating: "sortRating",
+} as const satisfies Record<Sort, string>;
 
 function sortEntries(entries: LibraryEntry[], sort: Sort, ratings: Map<string, number>): LibraryEntry[] {
   const copy = [...entries];
@@ -49,15 +50,16 @@ function ratingMap(reviews: Review[], userId: string) {
 }
 
 function SortSelect({ value, onChange, options }: { value: Sort; onChange: (s: Sort) => void; options: Sort[] }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-2">
       <label htmlFor="library-sort" className="text-sm text-muted">
-        Sort
+        {t.library.sort}
       </label>
       <Select id="library-sort" value={value} onChange={(e) => onChange(e.target.value as Sort)} className="w-auto">
         {options.map((o) => (
           <option key={o} value={o}>
-            {SORT_LABEL[o]}
+            {t.library[SORT_KEY[o]]}
           </option>
         ))}
       </Select>
@@ -66,12 +68,13 @@ function SortSelect({ value, onChange, options }: { value: Sort; onChange: (s: S
 }
 
 export function LibraryView() {
+  const t = useT();
   const state = useAppState();
   const [filter, setFilter] = useState<LibraryStatus | "all">("all");
   const [sort, setSort] = useState<Sort>("recent");
 
   return (
-    <RequireUser message="Sign in to see your library.">
+    <RequireUser message={t.library.signIn}>
       {(user) => {
         const all = getLibrary(state, user.id);
         const counts = Object.fromEntries(
@@ -84,15 +87,15 @@ export function LibraryView() {
           ratings,
         );
         const tabs: Array<{ key: LibraryStatus | "all"; label: string; count: number }> = [
-          { key: "all", label: "All", count: all.length },
-          ...LIBRARY_STATUSES.map((s) => ({ key: s, label: STATUS_LABEL[s], count: counts[s] })),
+          { key: "all", label: t.library.all, count: all.length },
+          ...LIBRARY_STATUSES.map((s) => ({ key: s, label: t.status[s], count: counts[s] })),
         ];
 
         return (
           <Container>
             <PageHeader
-              title="Your library"
-              description="Everything you've played, are playing, or want to play."
+              title={t.library.title}
+              description={t.library.description}
               actions={
                 <ButtonLink href="/library/wishlist" variant="secondary" size="sm">
                   <BookMarked className="h-4 w-4" /> Wishlist · {counts.want_to_play}
@@ -100,20 +103,20 @@ export function LibraryView() {
               }
             />
             <div className="mb-6 flex flex-col gap-4 border-b border-border pb-4 lg:flex-row lg:items-center lg:justify-between">
-              <div role="tablist" aria-label="Filter by status" className="-mx-1 flex gap-1 overflow-x-auto px-1">
-                {tabs.map((t) => (
+              <div role="tablist" aria-label={t.library.filterLabel} className="-mx-1 flex gap-1 overflow-x-auto px-1">
+                {tabs.map((tab) => (
                   <button
-                    key={t.key}
+                    key={tab.key}
                     type="button"
                     role="tab"
-                    aria-selected={filter === t.key}
-                    onClick={() => setFilter(t.key)}
+                    aria-selected={filter === tab.key}
+                    onClick={() => setFilter(tab.key)}
                     className={cn(
                       "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-                      filter === t.key ? "bg-fg text-bg" : "text-muted hover:bg-surface hover:text-fg",
+                      filter === tab.key ? "bg-fg text-bg" : "text-muted hover:bg-surface hover:text-fg",
                     )}
                   >
-                    {t.label} <span className="ml-0.5 opacity-60">{t.count}</span>
+                    {tab.label} <span className="ml-0.5 opacity-60">{tab.count}</span>
                   </button>
                 ))}
               </div>
@@ -128,7 +131,7 @@ export function LibraryView() {
                     showWishlist={false}
                     footer={
                       <div className="flex items-center gap-2">
-                        <Badge tone={STATUS_TONE[entry.status]}>{STATUS_LABEL[entry.status]}</Badge>
+                        <Badge tone={STATUS_TONE[entry.status]}>{t.status[entry.status]}</Badge>
                         {ratings.has(game.id) ? <StarRating value={ratings.get(game.id)!} size="xs" /> : null}
                       </div>
                     }
@@ -138,9 +141,9 @@ export function LibraryView() {
             ) : (
               <EmptyState
                 icon={<Library />}
-                title={filter === "all" ? "Your library is empty" : `Nothing marked as ${STATUS_LABEL[filter as LibraryStatus]}`}
-                description="Find games on the Games page and add them with one tap."
-                action={<ButtonLink href="/games">Browse games</ButtonLink>}
+                title={filter === "all" ? t.library.empty : t.library.emptyStatus(t.status[filter as LibraryStatus])}
+                description={t.library.emptyHint}
+                action={<ButtonLink href="/games">{t.library.browse}</ButtonLink>}
               />
             )}
           </Container>
@@ -151,25 +154,26 @@ export function LibraryView() {
 }
 
 export function WishlistView() {
+  const t = useT();
   const state = useAppState();
   const [sort, setSort] = useState<Sort>("recent");
   const options: Sort[] = useMemo(() => ["recent", "title", "release_desc", "release_asc"], []);
 
   return (
-    <RequireUser message="Sign in to see your wishlist.">
+    <RequireUser message={t.library.wishlistSignIn}>
       {(user) => {
         const entries = sortEntries(getLibrary(state, user.id, "want_to_play"), sort, new Map());
         return (
           <Container>
             <nav aria-label="Breadcrumb" className="pt-6 text-sm text-muted">
               <Link href="/library" className="hover:text-fg">
-                Library
+                {t.nav.library}
               </Link>{" "}
-              / <span className="text-fg">Wishlist</span>
+              / <span className="text-fg">{t.library.wishlistTitle}</span>
             </nav>
             <PageHeader
-              title="Wishlist"
-              description={`${pluralize(entries.length, "game")} you want to play. Saving a game marks it as “Want to Play” in your library.`}
+              title={t.library.wishlistTitle}
+              description={t.library.wishlistDescription(entries.length)}
             />
             <div className="mb-6 flex justify-end border-b border-border pb-4">
               <SortSelect value={sort} onChange={setSort} options={options} />
@@ -183,9 +187,9 @@ export function WishlistView() {
             ) : (
               <EmptyState
                 icon={<BookMarked />}
-                title="Your wishlist is empty"
-                description="Tap the bookmark on any game to save it for later."
-                action={<ButtonLink href="/games">Discover games</ButtonLink>}
+                title={t.library.wishlistEmpty}
+                description={t.library.wishlistEmptyHint}
+                action={<ButtonLink href="/games">{t.library.discover}</ButtonLink>}
               />
             )}
           </Container>

@@ -1,6 +1,9 @@
+"use client";
+
 import { Gamepad2, Glasses, Monitor, Smartphone } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 /**
  * Compact platform markers (brand-coloured chips with a generic icon and a
@@ -78,11 +81,12 @@ export function platformFamilies(platforms: string[]): Family[] {
 }
 
 export function PlatformBadges({ platforms, max = 4, className }: { platforms: string[]; max?: number; className?: string }) {
+  const t = useT();
   const fams = platformFamilies(platforms);
   if (!fams.length) return null;
   const shown = fams.slice(0, max);
   return (
-    <ul className={cn("flex flex-wrap gap-1", className)} aria-label={`Platforms: ${platforms.join(", ")}`}>
+    <ul className={cn("flex flex-wrap gap-1", className)} aria-label={t.games.platforms(platforms.join(", "))}>
       {shown.map((f) => (
         <li
           key={f.key}

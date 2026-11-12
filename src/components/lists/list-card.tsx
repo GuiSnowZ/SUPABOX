@@ -7,7 +7,7 @@ import { GameCover } from "@/components/games/game-cover";
 import { Avatar } from "@/components/ui/avatar";
 import { getListGames, getProfileById } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
-import { pluralize } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import type { GameList } from "@/types";
 
 /** Overlapping stack of the first few covers. */
@@ -37,6 +37,7 @@ export function CoverStack({ list, max = 5 }: { list: GameList; max?: number }) 
 }
 
 export function ListCard({ list }: { list: GameList }) {
+  const t = useT();
   const state = useAppState();
   const author = getProfileById(state, list.userId);
   return (
@@ -46,7 +47,7 @@ export function ListCard({ list }: { list: GameList }) {
           <CoverStack list={list} />
         </div>
         <h3 className="mt-3 flex items-center gap-1.5 font-semibold text-fg transition-colors group-hover:text-accent">
-          {list.visibility === "private" ? <Lock className="h-3.5 w-3.5 text-faint" aria-label="Private" /> : null}
+          {list.visibility === "private" ? <Lock className="h-3.5 w-3.5 text-faint" aria-label={t.lists.private} /> : null}
           <span className="truncate">{list.title}</span>
         </h3>
       </Link>
@@ -57,7 +58,7 @@ export function ListCard({ list }: { list: GameList }) {
             {author.username}
           </Link>
         ) : null}
-        <span className="text-faint">· {pluralize(list.items.length, "game")}</span>
+        <span className="text-faint">· {t.common.games(list.items.length)}</span>
       </div>
       {list.description ? <p className="mt-1.5 line-clamp-2 text-sm text-muted">{list.description}</p> : null}
     </article>

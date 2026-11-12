@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { GAME_COLUMNS, type GameDbRow, toGame } from "@/lib/catalog/rows";
-import { getPublicSupabase } from "@/lib/supabase/public";
+import { createPublicSupabase } from "@/lib/supabase/public";
 import type { Game } from "@/types";
 import type { ListCategory } from "./ranking";
 
@@ -38,7 +38,7 @@ export { CATEGORY_TITLES } from "./categories";
 export const CLASSICS_LIST_SLUG = "100-greatest-games-of-all-time";
 
 function db() {
-  const client = getPublicSupabase();
+  const client = createPublicSupabase();
   if (!client) throw new Error("Supabase is not configured.");
   return client;
 }

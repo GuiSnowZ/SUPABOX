@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import type { SquareCrop } from "@/features/app/avatar";
+import { useT } from "@/i18n/client";
 import { clampPosition, type CropState, cropRect, initialCrop, MAX_ZOOM, MIN_ZOOM, scaleFor, zoomTo } from "@/lib/crop";
 
 const VIEW = 280; // px, the square crop window
@@ -26,6 +27,7 @@ export function AvatarCropper({
   saving: boolean;
 }) {
   // One cropper per file (the parent remounts it with a new key), so state starts fresh.
+  const t = useT();
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [crop, setCrop] = useState<CropState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function AvatarCropper({
   const scale = size && crop ? scaleFor(size.w, size.h, VIEW, crop.zoom) : 1;
 
   return (
-    <Dialog open onClose={onCancel} title="Adjust your photo" description="Drag to move it, and zoom to frame it.">
+    <Dialog open onClose={onCancel} title={t.cropper.title} description={t.cropper.hint}>
       <div className="flex flex-col items-center">
         <div
           className="relative touch-none overflow-hidden rounded-xl bg-black select-none"
@@ -79,14 +81,14 @@ export function AvatarCropper({
             // eslint-disable-next-line @next/next/no-img-element -- local preview of the chosen file
             <img
               src={url}
-              alt="Your photo"
+              alt={t.cropper.alt}
               draggable={false}
               onLoad={(e) => {
                 const img = e.currentTarget;
                 setSize({ w: img.naturalWidth, h: img.naturalHeight });
                 setCrop(initialCrop(img.naturalWidth, img.naturalHeight, VIEW));
               }}
-              onError={() => setError("Your browser can't open this image. Try a JPG or PNG.")}
+              onError={() => setError(t.cropper.cantOpen)}
               className="pointer-events-none absolute top-0 left-0 max-w-none origin-top-left"
               style={
                 size && crop
@@ -102,7 +104,7 @@ export function AvatarCropper({
         {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
 
         <div className="mt-4 flex w-full max-w-[280px] items-center gap-3">
-          <button type="button" onClick={() => crop && setZoom(crop.zoom / 1.2)} aria-label="Zoom out" className="text-muted hover:text-fg">
+          <button type="button" onClick={() => crop && setZoom(crop.zoom / 1.2)} aria-label={t.cropper.zoomOut} className="text-muted hover:text-fg">
             <ZoomOut className="h-4 w-4" />
           </button>
           <input
@@ -112,21 +114,21 @@ export function AvatarCropper({
             step={0.01}
             value={crop?.zoom ?? 1}
             onChange={(e) => setZoom(Number(e.target.value))}
-            aria-label="Zoom"
+            aria-label={t.cropper.zoom}
             className="h-1.5 flex-1 cursor-pointer accent-[var(--color-accent)]"
             disabled={!crop}
           />
-          <button type="button" onClick={() => crop && setZoom(crop.zoom * 1.2)} aria-label="Zoom in" className="text-muted hover:text-fg">
+          <button type="button" onClick={() => crop && setZoom(crop.zoom * 1.2)} aria-label={t.cropper.zoomIn} className="text-muted hover:text-fg">
             <ZoomIn className="h-4 w-4" />
           </button>
         </div>
 
         <div className="mt-5 grid w-full max-w-[280px] grid-cols-2 gap-2">
           <Button variant="ghost" onClick={onCancel} disabled={saving}>
-            Cancel
+            {t.common.cancel}
           </Button>
           <Button onClick={() => size && crop && onConfirm(cropRect(size.w, size.h, VIEW, crop))} disabled={!crop || saving}>
-            {saving ? "Saving…" : "Save photo"}
+            {saving ? t.common.saving : t.cropper.save}
           </Button>
         </div>
       </div>

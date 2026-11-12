@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
+import { useT } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
@@ -53,7 +56,7 @@ export function PageHeader({
 export function SectionHeader({
   title,
   href,
-  linkLabel = "See all",
+  linkLabel,
   count,
   id,
 }: {
@@ -63,6 +66,7 @@ export function SectionHeader({
   count?: number;
   id?: string;
 }) {
+  const t = useT();
   return (
     <div className="mb-4 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <h2 id={id} className="text-xs font-semibold tracking-[0.12em] text-muted uppercase">
@@ -71,7 +75,7 @@ export function SectionHeader({
       </h2>
       {href ? (
         <Link href={href} className="text-xs font-medium text-muted transition-colors hover:text-accent">
-          {linkLabel}
+          {linkLabel ?? t.common.seeAll}
         </Link>
       ) : null}
     </div>

@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 /**
  * Modal dialog built on the native <dialog> element (focus trap, Escape and
@@ -24,6 +25,7 @@ export function Dialog({
   children: ReactNode;
   className?: string;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -63,7 +65,7 @@ export function Dialog({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t.common.close}
               className="-mt-1 -mr-1 rounded-lg p-1.5 text-faint hover:bg-surface hover:text-fg"
             >
               <X className="h-5 w-5" />

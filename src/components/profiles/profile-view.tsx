@@ -47,6 +47,7 @@ import { promptSignIn, toast } from "@/features/app/ui-store";
 import { formatDate } from "@/lib/utils";
 import type { Game, Profile } from "@/types";
 import { FavoriteGames } from "./favorite-games";
+import { useLocale, useT } from "@/i18n/client";
 import { Medals } from "./medals";
 import { RatedGames } from "./rated-games";
 
@@ -80,6 +81,7 @@ function Stat({
 }
 
 function FollowButton({ profile }: { profile: Profile }) {
+  const t = useT();
   const state = useAppState();
   const following = isFollowing(state, state.currentUserId, profile.id);
   return (
@@ -90,13 +92,13 @@ function FollowButton({ profile }: { profile: Profile }) {
       onClick={async () => {
         if (!state.authReady) return;
         if (!state.currentUserId)
-          return promptSignIn(`Sign in to follow ${profile.displayName}.`);
+          return promptSignIn(t.profile.signInFollow(profile.displayName));
         const r = await actions.toggleFollow(profile.id);
         if (!r.ok) return toast(r.error, "error");
         toast(
           following
-            ? `Unfollowed ${profile.displayName}`
-            : `Following ${profile.displayName}`,
+            ? t.profile.unfollowed(profile.displayName)
+            : t.profile.nowFollowing(profile.displayName),
         );
       }}
     >
@@ -104,12 +106,12 @@ function FollowButton({ profile }: { profile: Profile }) {
         <>
           <UserCheck className="h-4 w-4 group-hover/follow:hidden" />
           <UserX className="hidden h-4 w-4 group-hover/follow:block" />
-          <span className="group-hover/follow:hidden">Following</span>
-          <span className="hidden group-hover/follow:inline">Unfollow</span>
+          <span className="group-hover/follow:hidden">{t.profile.following}</span>
+          <span className="hidden group-hover/follow:inline">{t.profile.unfollow}</span>
         </>
       ) : (
         <>
-          <UserPlus className="h-4 w-4" /> Follow
+          <UserPlus className="h-4 w-4" /> {t.profile.follow}
         </>
       )}
     </Button>
@@ -118,6 +120,7 @@ function FollowButton({ profile }: { profile: Profile }) {
 
 /** Per-friend bell: shown next to "Following" to turn this person's notifications on or off. */
 function FriendBell({ profile }: { profile: Profile }) {
+  const t = useT();
   const state = useAppState();
   const me = state.currentUserId;
   const follow = state.follows.find(
@@ -133,17 +136,17 @@ function FriendBell({ profile }: { profile: Profile }) {
       aria-pressed={on}
       aria-label={
         on
-          ? `Turn off notifications from ${profile.displayName}`
-          : `Turn on notifications from ${profile.displayName}`
+          ? t.profile.bellOff(profile.displayName)
+          : t.profile.bellOn(profile.displayName)
       }
-      title={on ? "Notifications on" : "Notifications off"}
+      title={on ? t.profile.notificationsOn : t.profile.notificationsOff}
       onClick={async () => {
         const r = await actions.setFollowNotify(profile.id, !on);
         if (!r.ok) return toast(r.error, "error");
         toast(
           on
-            ? `You won't be notified about ${profile.displayName}`
-            : `You'll be notified about ${profile.displayName}`,
+            ? t.profile.wontNotify(profile.displayName)
+            : t.profile.willNotify(profile.displayName),
         );
       }}
     >
@@ -172,6 +175,8 @@ function CoverRow({ games, empty }: { games: Game[]; empty: string }) {
 }
 
 function ProfileContent({ profile }: { profile: Profile }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const viewerId = state.currentUserId;
   const isOwner = viewerId === profile.id;
@@ -227,20 +232,20 @@ function ProfileContent({ profile }: { profile: Profile }) {
               </p>
             ) : null}
             <div className="mt-5 grid grid-cols-5 gap-2 sm:flex sm:gap-x-8">
-              <Stat value={completed.length} label="Completed" />
+              <Stat value={completed.length} label={t.profile.statCompleted} />
               <Stat
                 value={getReviewsByUser(state, profile.id).length}
-                label="Reviews"
+                label={t.profile.statReviews}
               />
-              <Stat value={lists.length} label="Lists" />
-              <Stat value={followers} label="Followers" />
-              <Stat value={followingCount} label="Following" />
+              <Stat value={lists.length} label={t.profile.statLists} />
+              <Stat value={followers} label={t.profile.statFollowers} />
+              <Stat value={followingCount} label={t.profile.statFollowing} />
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {isOwner ? (
               <ButtonLink href="/profile/edit" variant="secondary">
-                <Pencil className="h-4 w-4" /> Edit Profile
+                <Pencil className="h-4 w-4" /> {t.profile.edit}
               </ButtonLink>
             ) : (
               <>
@@ -259,27 +264,26 @@ function ProfileContent({ profile }: { profile: Profile }) {
             variant="secondary"
             size="sm"
           >
-            <CalendarDays className="h-4 w-4" /> Diary
+            <CalendarDays className="h-4 w-4" /> {t.profile.diary}
           </ButtonLink>
           <ButtonLink
             href={`/users/${profile.username}/stats?year=${new Date().getFullYear()}`}
             variant="secondary"
             size="sm"
           >
-            <BarChart3 className="h-4 w-4" /> {new Date().getFullYear()} in
-            Review
+            <BarChart3 className="h-4 w-4" /> {t.profile.inReview(new Date().getFullYear())}
           </ButtonLink>
           {isOwner ? (
             <>
               <ButtonLink href="/library" variant="secondary" size="sm">
-                <Library className="h-4 w-4" /> My Library · {library.length}
+                <Library className="h-4 w-4" /> {t.profile.myLibrary} · {library.length}
               </ButtonLink>
               <ButtonLink
                 href="/library/wishlist"
                 variant="secondary"
                 size="sm"
               >
-                <BookMarked className="h-4 w-4" /> My Wishlist · {wishlistCount}
+                <BookMarked className="h-4 w-4" /> {t.profile.myWishlist} · {wishlistCount}
               </ButtonLink>
             </>
           ) : null}
@@ -296,21 +300,21 @@ function ProfileContent({ profile }: { profile: Profile }) {
 
         <div className="grid gap-14 lg:grid-cols-2">
           <Section>
-            <SectionHeader title="Recently Played" />
+            <SectionHeader title={t.profile.recentlyPlayed} />
             <CoverRow
               games={recentlyPlayed.slice(0, 4)}
-              empty="Nothing played recently."
+              empty={t.profile.nothingRecent}
             />
           </Section>
           <Section>
             <SectionHeader
-              title="Completed"
+              title={t.profile.completed}
               count={completed.length}
               href={isOwner ? "/library" : undefined}
             />
             <CoverRow
               games={completed.slice(0, 4).map((e) => e.game)}
-              empty="No completed games yet."
+              empty={t.profile.noneCompleted}
             />
           </Section>
         </div>
@@ -318,7 +322,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
         <section aria-labelledby="lists-heading">
           <SectionHeader
             id="lists-heading"
-            title={isOwner ? "My Lists" : "Lists"}
+            title={isOwner ? t.profile.myLists : t.profile.lists}
             count={lists.length}
           />
           {lists.length ? (
@@ -329,15 +333,15 @@ function ProfileContent({ profile }: { profile: Profile }) {
             </ListGrid>
           ) : isOwner ? (
             <EmptyState
-              title="No lists yet"
+              title={t.profile.noLists}
               action={
                 <ButtonLink href="/lists/new" size="sm">
-                  <ListPlus className="h-4 w-4" /> Create a list
+                  <ListPlus className="h-4 w-4" /> {t.lists.create}
                 </ButtonLink>
               }
             />
           ) : (
-            <p className="text-sm text-muted">No public lists.</p>
+            <p className="text-sm text-muted">{t.profile.noPublicLists}</p>
           )}
           {isOwner && lists.length ? (
             <ButtonLink
@@ -346,7 +350,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
               size="sm"
               className="mt-6"
             >
-              <ListPlus className="h-4 w-4" /> New list
+              <ListPlus className="h-4 w-4" /> {t.lists.newList}
             </ButtonLink>
           ) : null}
         </section>
@@ -357,7 +361,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
         >
           <SectionHeader
             id="profile-reviews-heading"
-            title="Recent Reviews"
+            title={t.profile.recentReviews}
             href={isOwner ? "/reviews" : undefined}
           />
           {reviews.length ? (
@@ -366,12 +370,12 @@ function ProfileContent({ profile }: { profile: Profile }) {
               return g ? <ReviewCard key={r.id} review={r} game={g} /> : null;
             })
           ) : (
-            <p className="text-sm text-muted">No written reviews yet.</p>
+            <p className="text-sm text-muted">{t.profile.noWritten}</p>
           )}
         </section>
 
         <p className="text-xs text-faint">
-          Member since {formatDate(profile.joinedAt)}
+          {t.profile.memberSince(formatDate(profile.joinedAt, locale))}
         </p>
       </Container>
     </div>
@@ -380,6 +384,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
 
 /** `/users/[username]` — anyone's public profile. */
 export function PublicProfile({ username }: { username: string }) {
+  const t = useT();
   const state = useAppState();
   const status = useLoad(`user:${username.toLowerCase()}`, () =>
     loaders.user(username),
@@ -392,8 +397,8 @@ export function PublicProfile({ username }: { username: string }) {
     return (
       <Container className="py-16">
         <EmptyState
-          title="User not found"
-          description={`There's no one called @${username} on Supabox.`}
+          title={t.profile.userNotFound}
+          description={t.profile.userNotFoundHint(username)}
         />
       </Container>
     );
@@ -403,8 +408,9 @@ export function PublicProfile({ username }: { username: string }) {
 
 /** `/profile` — the signed-in user's own profile. */
 export function MyProfile() {
+  const t = useT();
   return (
-    <RequireUser message="Sign in to see your profile.">
+    <RequireUser message={t.profile.signIn}>
       {(user) => <ProfileContent profile={user} />}
     </RequireUser>
   );

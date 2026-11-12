@@ -13,21 +13,23 @@ import { StarRating } from "@/components/ui/star-rating";
 import { actions } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import { cn, formatDate } from "@/lib/utils";
+import { useLocale, useT } from "@/i18n/client";
 import type { Game, Profile, Review } from "@/types";
 
 export function ReviewBody({ review, clamp = false }: { review: Review; clamp?: boolean }) {
+  const t = useT();
   const [revealed, setRevealed] = useState(false);
-  if (!review.body) return <p className="text-sm text-faint italic">Rated without a written review.</p>;
+  if (!review.body) return <p className="text-sm text-faint italic">{t.reviews.ratedOnly}</p>;
   if (review.containsSpoilers && !revealed) {
     return (
       <div className="rounded-lg border border-dashed border-border bg-bg/40 px-3 py-2.5 text-sm">
-        <span className="text-muted">This review contains spoilers.</span>{" "}
+        <span className="text-muted">{t.reviews.hasSpoilers}</span>{" "}
         <button
           type="button"
           onClick={() => setRevealed(true)}
           className="inline-flex items-center gap-1 font-medium text-accent hover:underline"
         >
-          <Eye className="h-3.5 w-3.5" /> Show review
+          <Eye className="h-3.5 w-3.5" /> {t.reviews.showReview}
         </button>
       </div>
     );
@@ -61,6 +63,8 @@ export function ReviewCard({
   /** On the review's own page: never clamp the text, and no "comments" link. */
   full?: boolean;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const edited = review.updatedAt !== review.createdAt;
   return (
     <article className="flex gap-4 border-b border-border py-5 last:border-b-0">
@@ -87,11 +91,11 @@ export function ReviewCard({
             </Link>
           ) : null}
           {review.rating !== null ? <StarRating value={review.rating} /> : null}
-          {review.containsSpoilers ? <Badge tone="warning">Spoilers</Badge> : null}
+          {review.containsSpoilers ? <Badge tone="warning">{t.reviews.spoilers}</Badge> : null}
         </div>
         <p className="mt-1 text-xs text-faint">
-          <time dateTime={review.createdAt}>{formatDate(review.createdAt)}</time>
-          {edited ? <span> · edited {formatDate(review.updatedAt)}</span> : null}
+          <time dateTime={review.createdAt}>{formatDate(review.createdAt, locale)}</time>
+          {edited ? <span> · {t.reviews.edited(formatDate(review.updatedAt, locale))}</span> : null}
         </p>
         <div className="mt-2.5">
           <ReviewBody review={review} clamp={!editable && !full} />
@@ -102,26 +106,26 @@ export function ReviewCard({
             <Link
               href={`/reviews/${review.id}`}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted hover:text-fg"
-              aria-label={`Comments (${review.commentCount ?? 0})`}
+              aria-label={t.reviews.comments(review.commentCount ?? 0)}
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              <span className="tabular-nums">{review.commentCount ? review.commentCount : "Comment"}</span>
+              <span className="tabular-nums">{review.commentCount ? review.commentCount : t.reviews.comment}</span>
             </Link>
           )}
         </div>
         {editable ? (
           <div className="mt-3 flex flex-wrap items-center gap-1">
             <Link href={`/games/${game.slug}#your-review`} className={buttonClasses("ghost", "sm")}>
-              <Pencil className="h-3.5 w-3.5" /> Edit
+              <Pencil className="h-3.5 w-3.5" /> {t.reviews.edit}
             </Link>
             <ConfirmButton
-              prompt="Delete this review?"
+              prompt={t.reviews.deleteThis}
               onConfirm={async () => {
                 const r = await actions.deleteReview(review.id);
-                toast(r.ok ? "Review deleted" : r.error, r.ok ? "default" : "error");
+                toast(r.ok ? t.reviews.deleted : r.error, r.ok ? "default" : "error");
               }}
             >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <Trash2 className="h-3.5 w-3.5" /> {t.common.delete}
             </ConfirmButton>
           </div>
         ) : null}

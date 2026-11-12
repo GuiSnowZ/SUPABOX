@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Camera, Loader2 } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
@@ -14,9 +15,11 @@ import { AvatarCropper } from "./avatar-cropper";
 import { actions } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import type { Profile } from "@/types";
+import { useT } from "@/i18n/client";
 
 /** Upload, change or remove the profile picture. Saves immediately (separate from the form). */
 function AvatarPicker({ user }: { user: Profile }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<"upload" | "remove" | null>(null);
   const [chosen, setChosen] = useState<{ file: File; url: string } | null>(null);
@@ -41,7 +44,7 @@ function AvatarPicker({ user }: { user: Profile }) {
     const r = await uploadAvatar(chosen.file, crop);
     setPending(null);
     if (r.ok) closeEditor();
-    toast(r.ok ? "Profile picture updated" : r.error, r.ok ? "default" : "error");
+    toast(r.ok ? t.editProfile.photoUpdated : r.error, r.ok ? "default" : "error");
   }
 
   return (
@@ -65,7 +68,7 @@ function AvatarPicker({ user }: { user: Profile }) {
           disabled={Boolean(pending)}
         />
         <Button variant="secondary" size="sm" onClick={() => inputRef.current?.click()} disabled={Boolean(pending)}>
-          <Camera className="h-4 w-4" /> {user.avatarUrl ? "Change photo" : "Upload photo"}
+          <Camera className="h-4 w-4" /> {user.avatarUrl ? t.editProfile.changePhoto : t.editProfile.uploadPhoto}
         </Button>
         {user.avatarUrl ? (
           <Button
@@ -76,13 +79,13 @@ function AvatarPicker({ user }: { user: Profile }) {
               setPending("remove");
               const r = await removeAvatar();
               setPending(null);
-              toast(r.ok ? "Profile picture removed" : r.error, r.ok ? "default" : "error");
+              toast(r.ok ? t.editProfile.photoRemoved : r.error, r.ok ? "default" : "error");
             }}
           >
-            Remove
+            {t.editProfile.remove}
           </Button>
         ) : null}
-        <p className="w-full text-xs text-faint">JPG, PNG or WebP. You can adjust the framing next.</p>
+        <p className="w-full text-xs text-faint">{t.editProfile.photoHint}</p>
       </div>
       {chosen ? (
         <AvatarCropper key={chosen.url} url={chosen.url} saving={pending === "upload"} onCancel={closeEditor} onConfirm={save} />
@@ -92,6 +95,7 @@ function AvatarPicker({ user }: { user: Profile }) {
 }
 
 function Form({ user }: { user: Profile }) {
+  const t = useT();
   const router = useRouter();
   const [displayName, setDisplayName] = useState(user.displayName);
   const [bio, setBio] = useState(user.bio);
@@ -101,27 +105,27 @@ function Form({ user }: { user: Profile }) {
     e.preventDefault();
     const r = await actions.updateProfile({ displayName, bio });
     if (!r.ok) return setError(r.error);
-    toast("Profile updated");
+    toast(t.editProfile.updated);
     router.push("/profile");
   }
 
   return (
     <form onSubmit={submit} className="max-w-lg space-y-5" noValidate>
       <AvatarPicker user={{ ...user, displayName: displayName || user.displayName }} />
-      <Field label="Display name" htmlFor="displayName">
+      <Field label={t.editProfile.displayName} htmlFor="displayName">
         <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={50} />
       </Field>
-      <Field label="Username" htmlFor="username" hint="Usernames can't be changed yet.">
+      <Field label={t.editProfile.username} htmlFor="username" hint={t.editProfile.usernameHint}>
         <Input id="username" value={`@${user.username}`} disabled />
       </Field>
-      <Field label="Bio" htmlFor="bio" hint={`${bio.length}/300`}>
+      <Field label={t.editProfile.bio} htmlFor="bio" hint={`${bio.length}/300`}>
         <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} />
       </Field>
       <FormError>{error}</FormError>
       <div className="flex gap-2">
-        <Button type="submit">Save</Button>
+        <Button type="submit">{t.common.save}</Button>
         <Button variant="ghost" onClick={() => router.back()}>
-          Cancel
+          {t.common.cancel}
         </Button>
       </div>
     </form>
@@ -130,6 +134,7 @@ function Form({ user }: { user: Profile }) {
 
 /** LGPD/GDPR self-service: download all your data, or delete your account. */
 function YourData({ user }: { user: Profile }) {
+  const t = useT();
   const router = useRouter();
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
@@ -148,24 +153,24 @@ function YourData({ user }: { user: Profile }) {
         body: JSON.stringify({ confirm }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Couldn't delete your account.");
+      if (!res.ok) throw new Error(json.error ?? t.editProfile.deleteFailed);
       await signOut();
-      toast("Your account has been deleted");
+      toast(t.editProfile.deleted);
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't delete your account.");
+      setError(err instanceof Error ? err.message : t.editProfile.deleteFailed);
       setPending(false);
     }
   }
 
   return (
     <section aria-labelledby="your-data-heading" className="mt-14 max-w-lg">
-      <SectionHeader id="your-data-heading" title="Your data" />
+      <SectionHeader id="your-data-heading" title={t.editProfile.yourData} />
       <p className="text-sm text-muted">
-        Download a copy of everything you&apos;ve added to Supabox, or delete your account. See our{" "}
-        <a href="/privacy" className="text-accent hover:underline">
-          Privacy Policy
-        </a>
+        {t.editProfile.dataIntro}{" "}
+        <Link href="/privacy" className="text-accent hover:underline">
+          {t.editProfile.privacyPolicy}
+        </Link>
         .
       </p>
       <a
@@ -173,15 +178,13 @@ function YourData({ user }: { user: Profile }) {
         download
         className="mt-4 inline-flex h-10 items-center rounded-lg border border-border bg-surface px-4 text-sm font-medium hover:bg-surface-hover"
       >
-        Download my data
+        {t.editProfile.download}
       </a>
 
       <form onSubmit={deleteAccount} className="mt-8 rounded-[var(--radius-card)] border border-danger/30 p-4">
-        <p className="font-medium text-danger">Delete my account</p>
-        <p className="mt-1 text-sm text-muted">
-          This permanently deletes your profile, library, reviews, diary, lists and follows. It can&apos;t be undone.
-        </p>
-        <Field label={`Type your username (${user.username}) to confirm`} htmlFor="confirm-delete">
+        <p className="font-medium text-danger">{t.editProfile.deleteTitle}</p>
+        <p className="mt-1 text-sm text-muted">{t.editProfile.deleteText}</p>
+        <Field label={t.editProfile.confirmLabel(user.username)} htmlFor="confirm-delete">
           <Input
             id="confirm-delete"
             value={confirm}
@@ -192,7 +195,7 @@ function YourData({ user }: { user: Profile }) {
         </Field>
         <FormError>{error}</FormError>
         <Button type="submit" variant="danger" className="mt-3" disabled={!matches || pending}>
-          {pending ? "Deleting…" : "Delete my account permanently"}
+          {pending ? t.editProfile.deleting : t.editProfile.deleteButton}
         </Button>
       </form>
     </section>
@@ -200,11 +203,12 @@ function YourData({ user }: { user: Profile }) {
 }
 
 export function EditProfile() {
+  const t = useT();
   return (
-    <RequireUser message="Sign in to edit your profile.">
+    <RequireUser message={t.editProfile.signIn}>
       {(user) => (
         <Container>
-          <PageHeader title="Edit profile" />
+          <PageHeader title={t.editProfile.title} />
           <Form key={user.id} user={user} />
           <YourData user={user} />
         </Container>

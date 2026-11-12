@@ -15,9 +15,15 @@ import { loaders, useAppState, useLoad } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import { activeYears, computeStats, type Ranked, type Stats } from "@/lib/stats";
 import { cn } from "@/lib/utils";
+import { useLocale, useT } from "@/i18n/client";
+import { genreName } from "@/i18n/genres";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const fmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+const intlTag = (locale: string) => (locale === "pt-BR" ? "pt-BR" : "en-US");
+/** Short month names in the page's language ("Jan", "fev."…). */
+const months = (locale: string) =>
+  Array.from({ length: 12 }, (_, m) =>
+    new Intl.DateTimeFormat(intlTag(locale), { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, m, 1))).replace(".", ""),
+  );
 
 function Tile({ value, label }: { value: string; label: string }) {
   return (
@@ -32,13 +38,23 @@ function Tile({ value, label }: { value: string; label: string }) {
  * Vertical bars, one series, single accent hue. Each bar has a native hover
  * tooltip and an accessible label; values are printed only on non-zero bars.
  */
-function ColumnChart({ values, labels, unit, title }: { values: number[]; labels: string[]; unit: [string, string]; title: string }) {
+function ColumnChart({
+  values,
+  labels,
+  unit,
+  title,
+}: {
+  values: number[];
+  labels: string[];
+  unit: (n: number) => string;
+  title: string;
+}) {
   const max = Math.max(1, ...values);
   return (
     <figure>
       <div className="flex h-40 items-end gap-1 border-b border-border sm:gap-2" role="list" aria-label={title}>
         {values.map((v, i) => {
-          const text = `${labels[i]}: ${v} ${v === 1 ? unit[0] : unit[1]}`;
+          const text = `${labels[i]}: ${unit(v)}`;
           return (
             <div key={i} role="listitem" aria-label={text} title={text} className="group flex h-full flex-1 flex-col justify-end">
               {v > 0 ? <span className="mb-1 text-center text-[11px] text-muted tabular-nums">{v}</span> : null}
@@ -83,61 +99,64 @@ function RankBars({ items, empty }: { items: Ranked[]; empty: string }) {
 }
 
 function StatsBody({ stats }: { stats: Stats }) {
+  const t = useT();
+  const locale = useLocale();
+  const fmt = new Intl.NumberFormat(intlTag(locale), { maximumFractionDigits: 1 });
   const hasAny = stats.gamesPlayed || stats.ratingsGiven || stats.completed.length;
   if (!hasAny) {
     return (
       <EmptyState
         icon={<BarChart3 />}
-        title={stats.year ? `Nothing logged in ${stats.year}` : "No stats yet"}
-        description="Stats appear as games are completed, played and rated."
+        title={stats.year ? t.stats.nothingIn(stats.year) : t.stats.none}
+        description={t.stats.noneHint}
       />
     );
   }
   return (
     <div className="space-y-12">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Tile value={fmt.format(stats.gamesPlayed)} label="Games played" />
-        <Tile value={fmt.format(stats.completed.length)} label="Completed" />
-        <Tile value={fmt.format(stats.hours)} label="Hours logged" />
-        <Tile value={fmt.format(stats.reviewsWritten)} label="Reviews written" />
-        <Tile value={stats.averageRating !== null ? `${stats.averageRating}★` : "—"} label="Average rating" />
+        <Tile value={fmt.format(stats.gamesPlayed)} label={t.stats.gamesPlayed} />
+        <Tile value={fmt.format(stats.completed.length)} label={t.stats.completed} />
+        <Tile value={fmt.format(stats.hours)} label={t.stats.hours} />
+        <Tile value={fmt.format(stats.reviewsWritten)} label={t.stats.reviewsWritten} />
+        <Tile value={stats.averageRating !== null ? `${fmt.format(stats.averageRating)}★` : "—"} label={t.stats.averageRating} />
       </div>
 
       {stats.year ? (
         <section aria-labelledby="by-month-heading">
-          <SectionHeader id="by-month-heading" title="Games completed per month" />
-          <ColumnChart values={stats.completedByMonth} labels={MONTHS} unit={["game", "games"]} title="Games completed per month" />
+          <SectionHeader id="by-month-heading" title={t.stats.perMonth} />
+          <ColumnChart values={stats.completedByMonth} labels={months(locale)} unit={t.stats.gamesUnit} title={t.stats.perMonth} />
         </section>
       ) : null}
 
       <section aria-labelledby="ratings-dist-heading">
-        <SectionHeader id="ratings-dist-heading" title="Ratings" count={stats.ratingsGiven} />
+        <SectionHeader id="ratings-dist-heading" title={t.stats.ratings} count={stats.ratingsGiven} />
         {stats.ratingsGiven ? (
           <ColumnChart
             values={stats.ratingDistribution}
             labels={["½", "1", "1½", "2", "2½", "3", "3½", "4", "4½", "5"]}
-            unit={["rating", "ratings"]}
-            title="How ratings are spread from half a star to five stars"
+            unit={t.stats.ratingsUnit}
+            title={t.stats.ratingSpread}
           />
         ) : (
-          <p className="text-sm text-muted">No ratings yet.</p>
+          <p className="text-sm text-muted">{t.stats.noRatings}</p>
         )}
       </section>
 
       <div className="grid gap-12 sm:grid-cols-2">
         <section aria-labelledby="genres-heading">
-          <SectionHeader id="genres-heading" title="Top genres" />
-          <RankBars items={stats.topGenres} empty="No genres yet." />
+          <SectionHeader id="genres-heading" title={t.stats.topGenres} />
+          <RankBars items={stats.topGenres.map((g) => ({ ...g, name: genreName(g.name, locale) }))} empty={t.stats.noGenres} />
         </section>
         <section aria-labelledby="platforms-heading">
-          <SectionHeader id="platforms-heading" title="Top platforms" />
-          <RankBars items={stats.topPlatforms} empty="Add a platform when logging a playthrough to see it here." />
+          <SectionHeader id="platforms-heading" title={t.stats.topPlatforms} />
+          <RankBars items={stats.topPlatforms} empty={t.stats.noPlatforms} />
         </section>
       </div>
 
       {stats.topRated.length ? (
         <section aria-labelledby="top-rated-heading">
-          <SectionHeader id="top-rated-heading" title={stats.year ? `Highest rated in ${stats.year}` : "Highest rated"} />
+          <SectionHeader id="top-rated-heading" title={stats.year ? t.stats.highestIn(stats.year) : t.stats.highest} />
           <ol className="grid grid-cols-3 gap-4 sm:grid-cols-5">
             {stats.topRated.map(({ game, rating }, i) => (
               <li key={game.id}>
@@ -157,7 +176,7 @@ function StatsBody({ stats }: { stats: Stats }) {
 
       {stats.completed.length ? (
         <section aria-labelledby="completed-heading">
-          <SectionHeader id="completed-heading" title="Completed" count={stats.completed.length} />
+          <SectionHeader id="completed-heading" title={t.stats.completedSection} count={stats.completed.length} />
           <ul className="grid grid-cols-4 gap-3 sm:grid-cols-8">
             {stats.completed.slice(0, 48).map(({ game, date }) => (
               <li key={game.id}>
@@ -175,6 +194,7 @@ function StatsBody({ stats }: { stats: Stats }) {
 
 /** `/users/[username]/stats?year=2026`: stats for one year (the Year in Review) or all time. */
 export function StatsView({ username }: { username: string }) {
+  const t = useT();
   const state = useAppState();
   const router = useRouter();
   const params = useSearchParams();
@@ -206,7 +226,7 @@ export function StatsView({ username }: { username: string }) {
   if (!profile || !stats) {
     return status === "ready" && !profile ? (
       <Container className="py-16">
-        <EmptyState title="User not found" description={`There's no one called @${username} on Supabox.`} />
+        <EmptyState title={t.profile.userNotFound} description={t.profile.userNotFoundHint(username)} />
       </Container>
     ) : (
       <PageSkeleton />
@@ -217,7 +237,7 @@ export function StatsView({ username }: { username: string }) {
   if (status !== "ready" && status !== "error") return <PageSkeleton />;
 
   const first = profile.displayName.split(" ")[0];
-  const title = year ? `${first}'s ${year} in games` : `${first}'s gaming stats`;
+  const title = year ? t.stats.titleYear(first, year) : t.stats.titleAll(first);
 
   async function share() {
     const url = `${window.location.origin}/users/${profile!.username}/stats?year=${year ?? "all"}`;
@@ -225,7 +245,7 @@ export function StatsView({ username }: { username: string }) {
       if (navigator.share) await navigator.share({ title: `${title} · Supabox`, url });
       else {
         await navigator.clipboard.writeText(url);
-        toast("Link copied");
+        toast(t.stats.linkCopied);
       }
     } catch {
       // Share sheet dismissed.
@@ -243,16 +263,16 @@ export function StatsView({ username }: { username: string }) {
         <div className="flex items-center gap-4">
           <Avatar profile={profile} size="lg" />
           <div>
-            <p className="text-xs font-semibold tracking-[0.12em] text-accent uppercase">{year ? "Year in Review" : "All time"}</p>
+            <p className="text-xs font-semibold tracking-[0.12em] text-accent uppercase">{year ? t.stats.yearInReview : t.stats.allTime}</p>
             <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
           </div>
         </div>
         <Button variant="secondary" size="sm" onClick={share}>
-          <Share2 className="h-4 w-4" /> Share
+          <Share2 className="h-4 w-4" /> {t.stats.share}
         </Button>
       </header>
 
-      <div role="tablist" aria-label="Period" className="-mx-1 mb-8 flex gap-1 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label={t.stats.period} className="-mx-1 mb-8 flex gap-1 overflow-x-auto px-1 pb-1">
         {[...years.map(String), "all"].map((y) => {
           const active = (y === "all" && year === null) || Number(y) === year;
           return (
@@ -267,7 +287,7 @@ export function StatsView({ username }: { username: string }) {
                 active ? "bg-accent text-accent-fg" : "border border-border text-muted hover:text-fg",
               )}
             >
-              {y === "all" ? "All time" : y}
+              {y === "all" ? t.stats.allTime : y}
             </button>
           );
         })}
@@ -275,7 +295,7 @@ export function StatsView({ username }: { username: string }) {
 
       <StatsBody stats={stats} />
       <p className="mt-10 text-xs text-faint">
-        Completion dates come from finished diary entries, or the day a game was marked Completed. Hours and platforms come from diary entries.
+        {t.stats.footnote}
       </p>
     </Container>
   );

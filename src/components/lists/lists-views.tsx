@@ -28,16 +28,16 @@ import {
 import { canViewList } from "@/features/app/state";
 import { actions, loaders, useAppState, useLoad } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
-import { formatDate, pluralize } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ListCard, ListGrid } from "./list-card";
 import { ListEditor } from "./list-editor";
+import { useLocale, useT } from "@/i18n/client";
 import { ListGameGrid } from "./list-game-grid";
 import { Comments } from "@/components/social/comments";
 import { LikeButton } from "@/components/social/like-button";
 import { GameRoulette } from "./game-roulette";
 import { OfficialListCard } from "./official-list-card";
 import { LogoMark } from "@/components/layout/logo";
-import { CATEGORY_TITLES } from "@/lib/official-lists/categories";
 import type { OfficialListSummary } from "@/lib/official-lists/server";
 import type { ListCategory } from "@/lib/official-lists/ranking";
 import type { Game } from "@/types";
@@ -52,6 +52,7 @@ const CATEGORY_ORDER: ListCategory[] = [
 
 /** Official lists grouped by category, with the community lists below. */
 function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
+  const t = useT();
   if (!lists.length) return null;
   return (
     <section aria-labelledby="official-heading" className="space-y-10">
@@ -60,11 +61,10 @@ function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
           id="official-heading"
           className="flex items-center gap-2 text-xl font-semibold tracking-tight"
         >
-          <LogoMark className="h-6 w-6" /> Official Supabox Lists
+          <LogoMark className="h-6 w-6" /> {t.lists.official}
         </h2>
         <p className="mt-1 text-sm text-muted">
-          Built by Supabox from critic and player ratings on IGDB — every list
-          explains how it was made.
+          {t.lists.officialHint}
         </p>
       </div>
       {CATEGORY_ORDER.map((cat) => {
@@ -72,7 +72,7 @@ function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
         if (!group.length) return null;
         return (
           <div key={cat}>
-            <SectionHeader title={CATEGORY_TITLES[cat]} count={group.length} />
+            <SectionHeader title={t.lists.categories[cat]} count={group.length} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {group.map((l) => (
                 <OfficialListCard key={l.slug} list={l} />
@@ -92,6 +92,7 @@ export function ListsDiscover({
   official?: OfficialListSummary[];
   classics?: Game[];
 }) {
+  const t = useT();
   const state = useAppState();
   const booting = state.loads.bootstrap !== "ready";
   const publicLists = getPublicLists(state);
@@ -104,11 +105,11 @@ export function ListsDiscover({
   return (
     <Container>
       <PageHeader
-        title="Lists"
-        description="Official Supabox rankings, plus collections from the community."
+        title={t.lists.title}
+        description={t.lists.description}
         actions={
           <ButtonLink href="/lists/new">
-            <ListPlus className="h-4 w-4" /> New list
+            <ListPlus className="h-4 w-4" /> {t.lists.newList}
           </ButtonLink>
         }
       />
@@ -116,13 +117,13 @@ export function ListsDiscover({
         <GameRoulette classics={classics} />
         <OfficialLists lists={official} />
         <h2 className="-mb-6 text-xl font-semibold tracking-tight">
-          Community Lists
+          {t.lists.community}
         </h2>
         {featured.length ? (
           <section aria-labelledby="featured-heading">
-            <SectionHeader id="featured-heading" title="Featured Lists" />
+            <SectionHeader id="featured-heading" title={t.lists.featured} />
             <p className="-mt-2 mb-5 text-xs text-faint">
-              Hand-picked by the Supabox team.
+              {t.lists.featuredHint}
             </p>
             <ListGrid>
               {featured.map((l) => (
@@ -132,7 +133,7 @@ export function ListsDiscover({
           </section>
         ) : null}
         <section aria-labelledby="recent-lists-heading">
-          <SectionHeader id="recent-lists-heading" title="Recently Created" />
+          <SectionHeader id="recent-lists-heading" title={t.lists.recent} />
           {booting ? (
             <ListGrid>
               {Array.from({ length: 3 }, (_, i) => (
@@ -148,9 +149,9 @@ export function ListsDiscover({
           ) : (
             <EmptyState
               icon={<ListPlus />}
-              title="No lists yet"
-              description="Be the first to share a list with the community."
-              action={<ButtonLink href="/lists/new">Create a list</ButtonLink>}
+              title={t.lists.none}
+              description={t.lists.noneHint}
+              action={<ButtonLink href="/lists/new">{t.lists.create}</ButtonLink>}
             />
           )}
         </section>
@@ -158,7 +159,7 @@ export function ListsDiscover({
           <section aria-labelledby="my-lists-heading">
             <SectionHeader
               id="my-lists-heading"
-              title="My Lists"
+              title={t.lists.mine}
               count={mine.length}
             />
             {mine.length ? (
@@ -170,10 +171,10 @@ export function ListsDiscover({
             ) : (
               <EmptyState
                 icon={<ListPlus />}
-                title="You haven't made a list yet"
-                description="Best horror games? Childhood favorites? Start one in seconds."
+                title={t.lists.noneMine}
+                description={t.lists.noneMineHint}
                 action={
-                  <ButtonLink href="/lists/new">Create a list</ButtonLink>
+                  <ButtonLink href="/lists/new">{t.lists.create}</ButtonLink>
                 }
               />
             )}
@@ -185,6 +186,8 @@ export function ListsDiscover({
 }
 
 export function ListDetail({ id }: { id: string }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const status = useLoad(`list:${id}`, () => loaders.list(id));
   const router = useRouter();
@@ -206,9 +209,9 @@ export function ListDetail({ id }: { id: string }) {
       <Container className="py-16">
         <EmptyState
           icon={<Lock />}
-          title="List not found"
-          description="This list doesn't exist, or it's private."
-          action={<ButtonLink href="/lists">Browse lists</ButtonLink>}
+          title={t.lists.notFound}
+          description={t.lists.notFoundHint}
+          action={<ButtonLink href="/lists">{t.lists.browse}</ButtonLink>}
         />
       </Container>
     );
@@ -222,7 +225,7 @@ export function ListDetail({ id }: { id: string }) {
     <Container>
       <nav aria-label="Breadcrumb" className="pt-6 text-sm text-muted">
         <Link href="/lists" className="hover:text-fg">
-          Lists
+          {t.lists.title}
         </Link>
       </nav>
       <header className="flex flex-col gap-5 pt-4 pb-8 sm:flex-row sm:items-end sm:justify-between">
@@ -230,14 +233,14 @@ export function ListDetail({ id }: { id: string }) {
           <div className="mb-2 flex items-center gap-2">
             {list.visibility === "private" ? (
               <Badge>
-                <Lock className="h-3 w-3" /> Private
+                <Lock className="h-3 w-3" /> {t.lists.private}
               </Badge>
             ) : (
               <Badge>
-                <Globe className="h-3 w-3" /> Public
+                <Globe className="h-3 w-3" /> {t.lists.public}
               </Badge>
             )}
-            {list.featured ? <Badge tone="accent">Featured</Badge> : null}
+            {list.featured ? <Badge tone="accent">{t.lists.featuredBadge}</Badge> : null}
           </div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {list.title}
@@ -254,8 +257,8 @@ export function ListDetail({ id }: { id: string }) {
                 </span>
               </Link>
               <span className="text-faint">
-                · {pluralize(games.length, "game")} · updated{" "}
-                {formatDate(list.updatedAt)}
+                · {t.common.games(games.length)} ·{" "}
+                {t.lists.updated(formatDate(list.updatedAt, locale))}
               </span>
             </p>
           ) : null}
@@ -279,18 +282,18 @@ export function ListDetail({ id }: { id: string }) {
                 variant="secondary"
                 size="sm"
               >
-                <Pencil className="h-3.5 w-3.5" /> Edit
+                <Pencil className="h-3.5 w-3.5" /> {t.lists.edit}
               </ButtonLink>
               <ConfirmButton
-                prompt="Delete this list?"
+                prompt={t.lists.deleteThis}
                 onConfirm={async () => {
                   const r = await actions.deleteList(list.id);
                   if (!r.ok) return toast(r.error, "error");
-                  toast("List deleted");
+                  toast(t.lists.deleted);
                   router.push("/lists");
                 }}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete
+                <Trash2 className="h-3.5 w-3.5" /> {t.common.delete}
               </ConfirmButton>
             </>
           ) : null}
@@ -303,8 +306,8 @@ export function ListDetail({ id }: { id: string }) {
         />
       ) : (
         <EmptyState
-          title="This list is empty"
-          description={isOwner ? "Edit the list to add games." : undefined}
+          title={t.lists.empty}
+          description={isOwner ? t.lists.emptyOwner : undefined}
         />
       )}
       {list.visibility === "public" || isOwner ? (
@@ -317,13 +320,14 @@ export function ListDetail({ id }: { id: string }) {
 }
 
 export function NewList() {
+  const t = useT();
   return (
-    <RequireUser message="Sign in to create lists.">
+    <RequireUser message={t.lists.newSignIn}>
       {() => (
         <Container>
           <PageHeader
-            title="New list"
-            description="Lists can include any game — not only ones in your library."
+            title={t.lists.newList}
+            description={t.lists.newHint}
           />
           <ListEditor />
         </Container>
@@ -333,24 +337,25 @@ export function NewList() {
 }
 
 export function EditList({ id }: { id: string }) {
+  const t = useT();
   const state = useAppState();
   const status = useLoad(`list:${id}`, () => loaders.list(id));
   const list = state.lists.find((l) => l.id === id);
   if (!list && status !== "ready" && status !== "error")
     return <PageSkeleton />;
   return (
-    <RequireUser message="Sign in to edit your lists.">
+    <RequireUser message={t.lists.editSignIn}>
       {(user) =>
         !list || list.userId !== user.id ? (
           <Container className="py-16">
             <EmptyState
-              title="You can't edit this list"
-              description="Only the list's creator can edit it."
+              title={t.lists.cantEdit}
+              description={t.lists.cantEditHint}
             />
           </Container>
         ) : (
           <Container>
-            <PageHeader title="Edit list" />
+            <PageHeader title={t.lists.editTitle} />
             <ListEditor existing={list} />
           </Container>
         )

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { isLocale, type Locale, LOCALE_COOKIE, LOCALES, localeFromAcceptLanguage } from "@/i18n/config";
 import { gameMayExist } from "@/lib/catalog/exists";
 import { isSupabaseConfigured, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 
@@ -22,16 +23,42 @@ async function unknownGame(pathname: string): Promise<boolean> {
   return !(await gameMayExist(slug));
 }
 
+/** Paths that aren't pages (no language): API, auth callbacks, Next internals and files. */
+const NOT_A_PAGE = /^\/(api|auth|_next)(\/|$)|\.[a-z0-9]+$/i;
+
 /**
- * Refreshes the Supabase auth session cookie on each navigation so it doesn't
- * expire while the user is active. Authorization itself is enforced by
- * Row Level Security in the database, not here.
+ * 1. Language: /pt-BR/… or /en/… links save that language and redirect to the
+ *    plain URL; every page request is rewritten to /[lang]/… using the saved
+ *    choice, else the browser's language.
+ * 2. Unknown game slugs get a real 404 (game pages stream, so they can't set it).
+ * 3. Refreshes the Supabase auth session cookie so it doesn't expire while the
+ *    user is active. Authorization itself is enforced by Row Level Security.
  */
 export async function proxy(request: NextRequest) {
-  if (await unknownGame(request.nextUrl.pathname)) {
-    return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
+  const { pathname, search } = request.nextUrl;
+  const isPage = !NOT_A_PAGE.test(pathname);
+
+  const prefix = LOCALES.find((l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`));
+  if (isPage && prefix) {
+    const url = new URL(`${pathname.slice(prefix.length + 1) || "/"}${search}`, request.url);
+    const res = NextResponse.redirect(url);
+    res.cookies.set(LOCALE_COOKIE, prefix, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+    return res;
   }
-  let response = NextResponse.next({ request });
+
+  const saved = request.cookies.get(LOCALE_COOKIE)?.value;
+  const locale: Locale = isLocale(saved) ? saved : localeFromAcceptLanguage(request.headers.get("accept-language"));
+
+  const makeResponse = (): NextResponse => {
+    if (!isPage) return NextResponse.next({ request });
+    const url = new URL(`/${locale}${pathname === "/" ? "" : pathname}${search}`, request.url);
+    return NextResponse.rewrite(url, { request });
+  };
+
+  if (isPage && (await unknownGame(pathname))) {
+    return NextResponse.rewrite(new URL(`/${locale}/__not-found`, request.url), { status: 404 });
+  }
+  let response = makeResponse();
   if (!isSupabaseConfigured) return response;
 
   const supabase = createServerClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -39,7 +66,7 @@ export async function proxy(request: NextRequest) {
       getAll: () => request.cookies.getAll(),
       setAll: (toSet) => {
         toSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = makeResponse();
         toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
       },
     },

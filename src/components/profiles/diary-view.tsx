@@ -2,20 +2,26 @@
 
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Play } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { GameCover } from "@/components/games/game-cover";
 import { LoadError, PageSkeleton } from "@/components/layout/require-user";
 import { Button } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
-import { getPlaySessions, getProfileByUsername } from "@/features/app/selectors";
+import { getProfileByUsername } from "@/features/app/selectors";
 import { loaders, useAppState, useLoad } from "@/features/app/store";
-import { SESSION_KIND_LABEL } from "@/lib/library";
 import { cn } from "@/lib/utils";
 import type { Game, PlaySession } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const monthFmt = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-const dayFmt = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+const intlTag = (locale: string) => (locale === "pt-BR" ? "pt-BR" : "en-US");
+/** Monday-first short weekday names (Jan 1, 2024 was a Monday). */
+const weekdays = (locale: string) =>
+  Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(intlTag(locale), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 1 + i))),
+  );
+const monthFmt = (locale: string) => new Intl.DateTimeFormat(intlTag(locale), { month: "long", year: "numeric", timeZone: "UTC" });
+const dayFmt = (locale: string) =>
+  new Intl.DateTimeFormat(intlTag(locale), { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
 
 interface DayEvent {
   session: PlaySession;
@@ -43,24 +49,24 @@ function monthGrid(month: string): Array<string | null> {
 
 /** `/users/[username]/diary`: a calendar of when games were started and finished. */
 export function DiaryView({ username }: { username: string }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const status = useLoad(`user:${username.toLowerCase()}`, () => loaders.user(username));
   const profile = getProfileByUsername(state, username);
-  const profileId = profile?.id;
-  const sessions = useMemo(() => (profileId ? getPlaySessions(state, profileId) : []), [state, profileId]);
+  const sessions = profile
+    ? state.playSessions.filter((p) => p.userId === profile.id).sort((a, b) => b.startedOn.localeCompare(a.startedOn))
+    : [];
 
   // Events by day: a start and (if any) a finish for each entry.
-  const byDay = useMemo(() => {
-    const map = new Map<string, DayEvent[]>();
-    const add = (day: string, e: DayEvent) => map.set(day, [...(map.get(day) ?? []), e]);
-    for (const s of sessions) {
-      const game = state.games[s.gameId];
-      if (!game) continue;
-      add(s.startedOn, { session: s, game, kind: "started" });
-      if (s.finishedOn) add(s.finishedOn, { session: s, game, kind: "finished" });
-    }
-    return map;
-  }, [sessions, state.games]);
+  const byDay = new Map<string, DayEvent[]>();
+  for (const s of sessions) {
+    const game = state.games[s.gameId];
+    if (!game) continue;
+    const add = (day: string, e: DayEvent) => byDay.set(day, [...(byDay.get(day) ?? []), e]);
+    add(s.startedOn, { session: s, game, kind: "started" });
+    if (s.finishedOn) add(s.finishedOn, { session: s, game, kind: "finished" });
+  }
 
   const latest = sessions.map((s) => s.finishedOn ?? s.startedOn).sort().at(-1);
   const [month, setMonth] = useState<string | null>(null);
@@ -71,7 +77,7 @@ export function DiaryView({ username }: { username: string }) {
   if (!profile) {
     return status === "ready" ? (
       <Container className="py-16">
-        <EmptyState title="User not found" description={`There's no one called @${username} on Supabox.`} />
+        <EmptyState title={t.profile.userNotFound} description={t.profile.userNotFoundHint(username)} />
       </Container>
     ) : (
       <PageSkeleton />
@@ -94,39 +100,39 @@ export function DiaryView({ username }: { username: string }) {
         </Link>
       </nav>
       <PageHeader
-        title={isOwner ? "My Diary" : `${profile.displayName}'s Diary`}
-        description="Every playthrough, by the day it started and finished."
+        title={isOwner ? t.diaryPage.mine : t.diaryPage.theirs(profile.displayName)}
+        description={t.diaryPage.description}
       />
 
       {sessions.length === 0 ? (
         <EmptyState
           icon={<CalendarDays />}
-          title="No diary entries yet"
-          description={isOwner ? "Use the + button or a game's page to log when you start or finish a game." : undefined}
+          title={t.diaryPage.empty}
+          description={isOwner ? t.diaryPage.emptyOwner : undefined}
         />
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between">
-            <Button variant="ghost" size="icon" onClick={() => (setMonth(shiftMonth(shown, -1)), setSelected(null))} aria-label="Previous month">
+            <Button variant="ghost" size="icon" onClick={() => (setMonth(shiftMonth(shown, -1)), setSelected(null))} aria-label={t.diaryPage.previousMonth}>
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <h2 className="font-semibold" aria-live="polite">
-              {monthFmt.format(new Date(`${shown}-01T00:00:00Z`))}
+              {monthFmt(locale).format(new Date(`${shown}-01T00:00:00Z`))}
             </h2>
-            <Button variant="ghost" size="icon" onClick={() => (setMonth(shiftMonth(shown, 1)), setSelected(null))} aria-label="Next month">
+            <Button variant="ghost" size="icon" onClick={() => (setMonth(shiftMonth(shown, 1)), setSelected(null))} aria-label={t.diaryPage.nextMonth}>
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-faint" aria-hidden>
-            {WEEKDAYS.map((d) => (
+            {weekdays(locale).map((d) => (
               <div key={d} className="pb-1">
                 <span className="sm:hidden">{d[0]}</span>
                 <span className="max-sm:hidden">{d}</span>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1" aria-label="Diary calendar">
+          <div className="grid grid-cols-7 gap-1" aria-label={t.diaryPage.calendar}>
             {monthGrid(shown).map((day, i) => {
               if (!day) return <div key={`pad-${i}`} />;
               const events = byDay.get(day) ?? [];
@@ -137,7 +143,7 @@ export function DiaryView({ username }: { username: string }) {
                   type="button"
                   onClick={() => setSelected(selected === day ? null : day)}
                   disabled={!events.length}
-                  aria-label={`${dayFmt.format(new Date(`${day}T00:00:00Z`))}: ${events.length ? events.map((e) => `${e.kind} ${e.game.title}`).join(", ") : "nothing logged"}`}
+                  aria-label={`${dayFmt(locale).format(new Date(`${day}T00:00:00Z`))}: ${events.length ? events.map((e) => `${e.kind === "finished" ? t.diaryPage.finished : t.diaryPage.started} ${e.game.title}`).join(", ") : t.diaryPage.nothingLogged}`}
                   aria-pressed={selected === day}
                   className={cn(
                     "relative flex aspect-[3/4] flex-col overflow-hidden rounded-md border text-left transition-colors sm:aspect-square",
@@ -169,19 +175,19 @@ export function DiaryView({ username }: { username: string }) {
               <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-accent-fg">
                 <Check className="h-2.5 w-2.5" strokeWidth={3} />
               </span>
-              finished that day
+              {t.diaryPage.finishedThatDay}
             </span>
-            <span>Tap a day to see its entries.</span>
+            <span>{t.diaryPage.tapDay}</span>
           </p>
 
-          <section aria-label="Entries" className="mt-8 space-y-6">
+          <section aria-label={t.diaryPage.entries} className="mt-8 space-y-6">
             {listDays.length === 0 ? (
-              <p className="text-sm text-muted">Nothing logged this month.</p>
+              <p className="text-sm text-muted">{t.diaryPage.nothingThisMonth}</p>
             ) : (
               listDays.map((day) => (
                 <div key={day}>
                   <h3 className="mb-2 text-xs font-semibold tracking-[0.12em] text-muted uppercase">
-                    {dayFmt.format(new Date(`${day}T00:00:00Z`))}
+                    {dayFmt(locale).format(new Date(`${day}T00:00:00Z`))}
                   </h3>
                   <ul className="space-y-2">
                     {(byDay.get(day) ?? []).map((e) => (
@@ -193,16 +199,16 @@ export function DiaryView({ username }: { username: string }) {
                             <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
                               {e.kind === "finished" ? (
                                 <span className="inline-flex items-center gap-1 text-accent">
-                                  <Check className="h-3 w-3" /> Finished
+                                  <Check className="h-3 w-3" /> {t.diaryPage.finished}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1">
-                                  <Play className="h-3 w-3" /> Started
+                                  <Play className="h-3 w-3" /> {t.diaryPage.started}
                                 </span>
                               )}
-                              <span>{SESSION_KIND_LABEL[e.session.kind]}</span>
+                              <span>{t.sessionKind[e.session.kind]}</span>
                               {e.session.platform ? <span>{e.session.platform}</span> : null}
-                              {e.session.hours != null ? <span>{e.session.hours} h</span> : null}
+                              {e.session.hours != null ? <span>{t.diary.hoursShort(e.session.hours)}</span> : null}
                             </span>
                             {e.session.note ? <span className="mt-0.5 block truncate text-xs text-faint">“{e.session.note}”</span> : null}
                           </span>

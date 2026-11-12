@@ -1,8 +1,11 @@
+"use client";
+
 import { Lock } from "lucide-react";
 import Link from "next/link";
 import { SectionHeader } from "@/components/ui/primitives";
-import { MEDAL_TIERS, type MedalProgress, type MedalTier, medalProgress, TRACK_LABEL } from "@/lib/medals";
+import { MEDAL_TIERS, type MedalProgress, type MedalTier, medalProgress } from "@/lib/medals";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 /** Medal artwork for each tier lives in /public/medals/tier-<level>.png (Supabox originals). */
 const MEDAL_ART = true;
@@ -38,19 +41,20 @@ export function MedalArt({ tier, size = 64, locked = false, className }: { tier:
 }
 
 function TrackCard({ p }: { p: MedalProgress }) {
-  const label = TRACK_LABEL[p.track];
-  const unit = p.count === 1 ? label.unit[0] : label.unit[1];
+  const t = useT();
+  const track = p.track === "reviews" ? t.medals.critic : t.medals.completionist;
+  const tierName = (tier: MedalTier) => t.medals.tiers[tier.level - 1];
   const shown = p.earned ?? MEDAL_TIERS[0];
   return (
     <div className="flex items-center gap-4 rounded-[var(--radius-card)] border border-border bg-bg-subtle p-4">
       <MedalArt tier={shown} size={64} locked={!p.earned} />
       <div className="min-w-0 flex-1">
         <p className="font-semibold" style={p.earned ? { color: p.earned.color } : undefined}>
-          {p.earned ? `${p.earned.name} ${label.title}` : label.title}
-          {!p.earned ? <Lock className="ml-1.5 inline h-3.5 w-3.5 text-faint" aria-label="Locked" /> : null}
+          {p.earned ? t.medals.medalTitle(tierName(p.earned), track) : track}
+          {!p.earned ? <Lock className="ml-1.5 inline h-3.5 w-3.5 text-faint" aria-label={t.medals.locked} /> : null}
         </p>
         <p className="text-sm text-muted">
-          {p.count} {unit}
+          {p.track === "reviews" ? t.medals.reviewsWritten(p.count) : t.medals.gamesCompleted(p.count)}
         </p>
         {p.next ? (
           <>
@@ -58,11 +62,11 @@ function TrackCard({ p }: { p: MedalProgress }) {
               <div className="h-full rounded-full" style={{ width: `${Math.round(p.progress * 100)}%`, background: p.next.color }} />
             </div>
             <p className="mt-1 text-xs text-faint">
-              {p.next.threshold - p.count} more for {p.next.name}
+              {t.medals.moreFor(p.next.threshold - p.count, tierName(p.next))}
             </p>
           </>
         ) : (
-          <p className="mt-1 text-xs text-faint">Highest medal reached.</p>
+          <p className="mt-1 text-xs text-faint">{t.medals.top}</p>
         )}
       </div>
     </div>
@@ -71,17 +75,18 @@ function TrackCard({ p }: { p: MedalProgress }) {
 
 /** A profile's medals: reviews written and games completed, with progress to the next tier. */
 export function Medals({ reviews, completed }: { reviews: number; completed: number }) {
+  const t = useT();
   const tracks = [medalProgress("reviews", reviews), medalProgress("completed", completed)];
   return (
     <section aria-labelledby="medals-heading">
-      <SectionHeader id="medals-heading" title="Medals" />
+      <SectionHeader id="medals-heading" title={t.medals.title} />
       <div className="grid gap-3 sm:grid-cols-2">
         {tracks.map((p) => (
           <TrackCard key={p.track} p={p} />
         ))}
       </div>
       <Link href="/medals" className="mt-3 inline-block text-xs text-faint hover:text-accent">
-        How medals work — see all nine tiers →
+        {t.medals.howLink}
       </Link>
     </section>
   );

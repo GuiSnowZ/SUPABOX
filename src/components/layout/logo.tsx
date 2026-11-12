@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 /**
  * Supabox brand mark: the S-shaped box (raster artwork with transparency).
@@ -21,8 +24,9 @@ export function LogoMark({ className }: { className?: string }) {
 }
 
 export function Logo({ className }: { className?: string }) {
+  const t = useT();
   return (
-    <Link href="/" className={cn("flex items-center gap-2 rounded-md", className)} aria-label="Supabox home">
+    <Link href="/" className={cn("flex items-center gap-2 rounded-md", className)} aria-label={t.common.homeLabel}>
       <LogoMark />
       <span className="text-lg font-semibold tracking-tight text-fg">supabox</span>
     </Link>

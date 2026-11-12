@@ -1,4 +1,8 @@
+"use client";
+
 import type { ComponentProps, ReactNode } from "react";
+import { useLocale } from "@/i18n/client";
+import { translateMessage } from "@/i18n/errors";
 import { cn } from "@/lib/utils";
 
 const field =
@@ -49,11 +53,13 @@ export function Checkbox({ label, className, ...props }: ComponentProps<"input">
   );
 }
 
+/** Error message for a form. Plain-text messages from the logic layer are shown in the page's language. */
 export function FormError({ children }: { children: ReactNode }) {
+  const locale = useLocale();
   if (!children) return null;
   return (
     <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
-      {children}
+      {typeof children === "string" ? translateMessage(children, locale) : children}
     </p>
   );
 }

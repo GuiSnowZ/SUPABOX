@@ -13,9 +13,11 @@ import { getFavoriteEligibleGames, getUserReview } from "@/features/app/selector
 import { toast } from "@/features/app/ui-store";
 import { actions, useAppState } from "@/features/app/store";
 import { cn, releaseYear } from "@/lib/utils";
+import { useLocale, useT } from "@/i18n/client";
 import { type Game, type ID, MAX_FAVORITE_GAMES } from "@/types";
 
 function Slot({ index, onClick }: { index: number; onClick?: () => void }) {
+  const t = useT();
   const classes =
     "flex aspect-[3/4] w-full items-center justify-center rounded-[var(--radius-cover)] border border-dashed border-border text-faint";
   if (!onClick) {
@@ -29,7 +31,7 @@ function Slot({ index, onClick }: { index: number; onClick?: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Choose favorite #${index + 1}`}
+      aria-label={t.favorites.choose(index + 1)}
       className={cn(classes, "transition hover:border-accent hover:text-accent")}
     >
       <Plus className="h-5 w-5" />
@@ -54,6 +56,8 @@ function FavoritePicker({
   chosen: ID[];
   title: string;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const [query, setQuery] = useState("");
   const inputId = useId();
@@ -72,17 +76,17 @@ function FavoritePicker({
       open={open}
       onClose={close}
       title={title}
-      description="Only games you've marked as Completed and rated can be favorites."
+      description={t.favorites.onlyEligible}
     >
       {eligible.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">
-          No eligible games yet. Mark a game as <span className="text-fg">Completed</span> and give it a star
-          rating, and it will show up here.
+          {t.favorites.noneEligibleBefore} <span className="text-fg">{t.status.completed}</span>{" "}
+          {t.favorites.noneEligibleAfter}
         </p>
       ) : (
         <>
           <label htmlFor={inputId} className="sr-only">
-            Search your completed games
+            {t.favorites.searchLabel}
           </label>
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
@@ -90,14 +94,14 @@ function FavoritePicker({
               id={inputId}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your completed games…"
+              placeholder={t.favorites.searchPlaceholder}
               className="pl-9"
               autoComplete="off"
             />
           </div>
           <ul className="mt-3 space-y-0.5">
             {results.length === 0 ? (
-              <li className="py-6 text-center text-sm text-muted">None of your completed, rated games match “{query}”.</li>
+              <li className="py-6 text-center text-sm text-muted">{t.favorites.noMatch(query)}</li>
             ) : (
               results.map((g) => {
                 const already = chosen.includes(g.id);
@@ -117,13 +121,13 @@ function FavoritePicker({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-fg">{g.title}</span>
                         <span className="flex items-center gap-2 text-xs text-faint">
-                          {releaseYear(g.releaseDate)}
+                          {releaseYear(g.releaseDate, locale)}
                           {rating !== null ? <StarRating value={rating} size="xs" /> : null}
                         </span>
                       </span>
                       {already ? (
                         <span className="flex items-center gap-1 text-xs text-muted">
-                          <Check className="h-3.5 w-3.5" /> Added
+                          <Check className="h-3.5 w-3.5" /> {t.favorites.added}
                         </span>
                       ) : (
                         <Plus className="h-4 w-4 text-muted" />
@@ -142,6 +146,7 @@ function FavoritePicker({
 
 /** Five ordered favorite games. Owners can add, remove, replace and reorder. */
 export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: boolean }) {
+  const t = useT();
   const state = useAppState();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<ID[]>([]);
@@ -157,7 +162,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
   async function save() {
     const r = await actions.setFavorites(draft);
     if (!r.ok) return toast(r.error, "error");
-    toast("Favorite games saved");
+    toast(t.favorites.saved);
     setEditing(false);
   }
 
@@ -196,11 +201,11 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
     <section aria-labelledby="favorites-heading">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <SectionHeader id="favorites-heading" title="Favorite Games" />
+          <SectionHeader id="favorites-heading" title={t.favorites.title} />
         </div>
         {isOwner && !editing ? (
           <Button variant="ghost" size="sm" className="-mt-1.5" onClick={startEditing}>
-            <Pencil className="h-3.5 w-3.5" /> Edit
+            <Pencil className="h-3.5 w-3.5" /> {t.favorites.edit}
           </Button>
         ) : null}
       </div>
@@ -223,7 +228,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
                 <>
                   <GameCover game={g} />
                   <div className="mt-2 flex items-center justify-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${g.title} left`}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t.favorites.moveLeft(g.title)}>
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <Button
@@ -231,7 +236,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
                       size="icon"
                       className="h-7 w-7"
                       onClick={() => openPicker(i)}
-                      aria-label={`Replace ${g.title}`}
+                      aria-label={t.favorites.replace(g.title)}
                     >
                       <Replace className="h-3.5 w-3.5" />
                     </Button>
@@ -241,7 +246,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
                       className="h-7 w-7"
                       onClick={() => move(i, 1)}
                       disabled={i === shown.length - 1}
-                      aria-label={`Move ${g.title} right`}
+                      aria-label={t.favorites.moveRight(g.title)}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -253,7 +258,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
                         setDraft((ids) => ids.filter((x) => x !== g.id));
                         setReplacing(null);
                       }}
-                      aria-label={`Remove ${g.title}`}
+                      aria-label={t.favorites.remove(g.title)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -271,9 +276,9 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
 
       {isOwner && !editing && games.length === 0 ? (
         <p className="mt-3 text-sm text-muted">
-          Pick up to five games that define you.{" "}
+          {t.favorites.pickFive}{" "}
           <button type="button" onClick={startEditing} className="font-medium text-accent hover:underline">
-            Choose favorites
+            {t.favorites.chooseFavorites}
           </button>
         </p>
       ) : null}
@@ -286,14 +291,14 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
             onClick={() => openPicker(null)}
             disabled={draft.length >= MAX_FAVORITE_GAMES}
           >
-            <Plus className="h-4 w-4" /> Add favorite ({draft.length}/{MAX_FAVORITE_GAMES})
+            <Plus className="h-4 w-4" /> {t.favorites.addFavorite(draft.length, MAX_FAVORITE_GAMES)}
           </Button>
           <span className="flex-1" />
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-            Cancel
+            {t.common.cancel}
           </Button>
           <Button size="sm" onClick={save}>
-            Save favorites
+            {t.favorites.save}
           </Button>
         </div>
       ) : null}
@@ -306,7 +311,7 @@ export function FavoriteGames({ games, isOwner }: { games: Game[]; isOwner: bool
         }}
         onPick={pick}
         chosen={draft}
-        title={replacing !== null ? `Replace favorite #${replacing + 1}` : "Add a favorite game"}
+        title={replacing !== null ? t.favorites.replaceTitle(replacing + 1) : t.favorites.addTitle}
       />
     </section>
   );

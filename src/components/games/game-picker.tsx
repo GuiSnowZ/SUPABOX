@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/form";
 import { useGameSearch } from "@/hooks/use-game-search";
 import { releaseYear } from "@/lib/utils";
 import type { Game, ID } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 import { GameCover } from "./game-cover";
 
 /** Search the catalog and pick a game. Already-picked games are marked as added. */
 export function GamePicker({
   onPick,
   excludeIds = [],
-  placeholder = "Search games to add…",
+  placeholder,
   disabled = false,
 }: {
   onPick: (game: Game) => void;
@@ -20,6 +21,8 @@ export function GamePicker({
   placeholder?: string;
   disabled?: boolean;
 }) {
+  const t = useT();
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   const inputId = useId();
   const listId = useId();
@@ -30,14 +33,14 @@ export function GamePicker({
   return (
     <div className="relative">
       <label htmlFor={inputId} className="sr-only">
-        {placeholder}
+        {placeholder ?? t.search.placeholder}
       </label>
       <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" />
       <Input
         id={inputId}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t.search.placeholder}
         className="pl-9"
         autoComplete="off"
         disabled={disabled}
@@ -54,12 +57,12 @@ export function GamePicker({
           ) : results.length === 0 ? (
             <li className="flex items-center justify-center gap-2 px-3 py-4 text-center text-sm text-muted">
               {search.status === "done" ? (
-                <>No games match “{query}”.</>
+                <>{t.search.noMatch(query)}</>
               ) : query.trim().length < 2 ? (
-                <>Keep typing…</>
+                <>{t.search.keepTyping}</>
               ) : (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Searching…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t.search.searching}
                 </>
               )}
             </li>
@@ -81,11 +84,11 @@ export function GamePicker({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium text-fg">{g.title}</span>
                       <span className="block text-xs text-faint">
-                        {releaseYear(g.releaseDate)}
+                        {releaseYear(g.releaseDate, locale)}
                         {g.developer && !g.developer.startsWith("Unknown") ? ` · ${g.developer}` : ""}
                       </span>
                     </span>
-                    <span className="text-xs text-muted">{added ? "Added" : <Plus className="h-4 w-4" />}</span>
+                    <span className="text-xs text-muted">{added ? t.search.added : <Plus className="h-4 w-4" />}</span>
                   </button>
                 </li>
               );

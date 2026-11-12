@@ -1,6 +1,9 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { CoverArt, CoverMotif, Game } from "@/types";
+import { useT } from "@/i18n/client";
 
 /**
  * Game cover in a fixed 3:4 frame.
@@ -113,6 +116,7 @@ export function GameCover({
   /** Hide the printed title when the cover is very small (placeholder art only). */
   showTitle?: boolean;
 }) {
+  const t = useT();
   if (game.coverUrl) {
     return (
       <div
@@ -124,7 +128,7 @@ export function GameCover({
         {/* eslint-disable-next-line @next/next/no-img-element -- IGDB serves pre-sized, CDN-cached images */}
         <img
           src={game.coverUrl}
-          alt={`${game.title} cover art`}
+          alt={t.games.coverAlt(game.title)}
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover"
@@ -142,7 +146,7 @@ export function GameCover({
         className,
       )}
     >
-      <svg viewBox="0 0 300 400" className="h-full w-full" role="img" aria-label={`${game.title} cover art`}>
+      <svg viewBox="0 0 300 400" className="h-full w-full" role="img" aria-label={t.games.coverAlt(game.title)}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0.4" y2="1">
             <stop offset="0" stopColor={from} />

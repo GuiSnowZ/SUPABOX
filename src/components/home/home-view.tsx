@@ -15,15 +15,18 @@ import { getFeed, getProfileById } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
 import { timeAgo } from "@/lib/utils";
 import type { ActivityType, Game } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
-const VERB: Record<ActivityType, { text: string; icon: typeof Plus }> = {
-  added_to_library: { text: "wants to play", icon: BookMarked },
-  started_playing: { text: "started playing", icon: PlayCircle },
-  completed: { text: "completed", icon: CheckCircle2 },
-  published_review: { text: "reviewed", icon: PenLine },
+const VERB_ICON: Record<ActivityType, typeof Plus> = {
+  added_to_library: BookMarked,
+  started_playing: PlayCircle,
+  completed: CheckCircle2,
+  published_review: PenLine,
 };
 
 function ActivityFeed() {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const feed = getFeed(state, state.currentUserId, 10);
   if (state.loads.bootstrap !== "ready") {
@@ -39,8 +42,8 @@ function ActivityFeed() {
     return (
       <EmptyState
         icon={<Users />}
-        title="No activity yet"
-        description="Follow other players to see what they're playing."
+        title={t.home.noActivity}
+        description={t.home.noActivityHint}
       />
     );
   }
@@ -50,7 +53,7 @@ function ActivityFeed() {
         const user = getProfileById(state, a.userId);
         const game = state.games[a.gameId];
         if (!user || !game) return null;
-        const { text, icon: Icon } = VERB[a.type];
+        const Icon = VERB_ICON[a.type];
         const review = a.reviewId ? state.reviews.find((r) => r.id === a.reviewId) : undefined;
         const isMe = user.id === state.currentUserId;
         return (
@@ -60,16 +63,16 @@ function ActivityFeed() {
             </Link>
             <p className="min-w-0 flex-1 text-sm text-muted">
               <Link href={`/users/${user.username}`} className="font-medium text-fg hover:text-accent">
-                {isMe ? "You" : user.displayName}
+                {isMe ? t.home.you : user.displayName}
               </Link>{" "}
               <Icon className="inline h-3.5 w-3.5 -translate-y-px text-faint" aria-hidden />{" "}
-              {isMe && a.type === "added_to_library" ? "want to play" : text}{" "}
+              {isMe && a.type === "added_to_library" ? t.home.youWantToPlay : t.home.verbs[a.type]}{" "}
               <Link href={`/games/${game.slug}`} className="font-medium text-fg hover:text-accent">
                 {game.title}
               </Link>
               {review?.rating ? <StarRating value={review.rating} size="xs" className="ml-2 align-middle" /> : null}
               <span className="block text-xs text-faint">
-                <time dateTime={a.createdAt}>{timeAgo(a.createdAt)}</time>
+                <time dateTime={a.createdAt}>{timeAgo(a.createdAt, locale)}</time>
               </span>
             </p>
             <Link href={`/games/${game.slug}`} className="w-9 shrink-0" tabIndex={-1} aria-hidden>
@@ -83,37 +86,37 @@ function ActivityFeed() {
 }
 
 const HERO_POINTS = [
-  { icon: Gamepad2, label: "Track" },
-  { icon: NotebookPen, label: "Log" },
-  { icon: ListChecks, label: "Curate" },
-  { icon: Users, label: "Share" },
-];
+  { icon: Gamepad2, key: "track" },
+  { icon: NotebookPen, key: "log" },
+  { icon: ListChecks, key: "curate" },
+  { icon: Users, key: "share" },
+] as const;
 
 function Hero({ covers }: { covers: Game[] }) {
+  const t = useT();
   return (
     <section className="relative overflow-hidden border-b border-border">
       <Container className="grid items-center gap-10 py-14 md:grid-cols-[1.1fr_1fr] md:py-20">
         <div>
-          <p className="text-sm font-medium text-accent">Your games. Your story.</p>
+          <p className="text-sm font-medium text-accent">{t.home.heroTagline}</p>
           <h1 className="mt-3 text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl">
-            The diary for everything you play.
+            {t.home.heroTitle}
           </h1>
           <p className="mt-5 max-w-lg text-lg text-muted">
-            Track what you&apos;re playing, remember every playthrough, rate and review games, and discover new
-            favorites through friends.
+            {t.home.heroText}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href="/sign-up" size="lg">
-              Create your diary
+              {t.home.createDiary}
             </ButtonLink>
             <ButtonLink href="/games" size="lg" variant="secondary">
-              Browse games
+              {t.home.browse}
             </ButtonLink>
           </div>
           <ul className="mt-10 grid max-w-lg grid-cols-2 gap-4 text-sm text-muted sm:grid-cols-4">
-            {HERO_POINTS.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-2">
-                <Icon className="h-4 w-4 text-accent" /> {label}
+            {HERO_POINTS.map(({ icon: Icon, key }) => (
+              <li key={key} className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-accent" /> {t.home.points[key]}
               </li>
             ))}
           </ul>
@@ -132,6 +135,7 @@ function Hero({ covers }: { covers: Game[] }) {
 }
 
 export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[] }) {
+  const t = useT();
   const state = useAppState();
   const signedIn = Boolean(state.currentUserId);
   const me = state.currentUserId ? getProfileById(state, state.currentUserId) : null;
@@ -148,16 +152,16 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Welcome back, {me.displayName.split(" ")[0]}.
+                {t.home.welcomeBack(me.displayName.split(" ")[0])}
               </h1>
-              <p className="mt-1 text-muted">Here&apos;s what&apos;s happening with you and the people you follow.</p>
+              <p className="mt-1 text-muted">{t.home.welcomeHint}</p>
             </div>
             <QuickAddButton />
           </div>
         ) : null}
 
         <section aria-labelledby="new-heading">
-          <SectionHeader id="new-heading" title="Biggest new releases" href="/games" />
+          <SectionHeader id="new-heading" title={t.home.biggest} href="/games" />
           <GameGrid>
             {recent.slice(0, 6).map((g, i) => (
               <GameCard key={g.id} game={g} className={i === 4 ? "md:max-lg:hidden" : i === 5 ? "md:max-xl:hidden" : undefined} />
@@ -169,11 +173,11 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
 
         <div className="grid gap-14 lg:grid-cols-[1.2fr_1fr]">
           <section aria-labelledby="activity-heading">
-            <SectionHeader id="activity-heading" title={signedIn ? "Friends' activity" : "Community activity"} />
+            <SectionHeader id="activity-heading" title={signedIn ? t.home.friendsActivity : t.home.communityActivity} />
             <ActivityFeed />
           </section>
           <section aria-labelledby="home-reviews-heading">
-            <SectionHeader id="home-reviews-heading" title="Recent reviews" href={signedIn ? "/reviews" : undefined} />
+            <SectionHeader id="home-reviews-heading" title={t.home.recentReviews} href={signedIn ? "/reviews" : undefined} />
             {state.loads.bootstrap !== "ready" ? (
               <Skeleton className="h-40 w-full" />
             ) : recentReviews.length ? (
@@ -184,22 +188,22 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
                 ) : null;
               })
             ) : (
-              <p className="text-sm text-muted">No reviews yet — open a game you&apos;ve played and write the first one.</p>
+              <p className="text-sm text-muted">{t.home.noReviews}</p>
             )}
           </section>
         </div>
 
         {signedIn ? (
           <div className="flex flex-wrap gap-3 rounded-[var(--radius-card)] border border-border bg-bg-subtle p-5">
-            <p className="w-full text-sm text-muted sm:w-auto sm:flex-1 sm:self-center">Jump back in</p>
+            <p className="w-full text-sm text-muted sm:w-auto sm:flex-1 sm:self-center">{t.home.jumpBack}</p>
             <ButtonLink href="/library" variant="secondary" size="sm">
-              Library
+              {t.nav.library}
             </ButtonLink>
             <ButtonLink href="/library/wishlist" variant="secondary" size="sm">
-              Wishlist
+              {t.nav.wishlist}
             </ButtonLink>
             <ButtonLink href="/lists/new" variant="secondary" size="sm">
-              New list
+              {t.home.newList}
             </ButtonLink>
           </div>
         ) : null}

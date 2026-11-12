@@ -12,10 +12,12 @@ import { signOut } from "@/features/app/auth";
 import { useAppState } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import { Logo } from "./logo";
 import { isActive, PRIMARY_NAV } from "./nav-config";
 
 function DesktopNavLinks({ pathname }: { pathname: string | null }) {
+  const t = useT();
   return (
     <ul className="hidden items-center gap-1 md:flex">
       {PRIMARY_NAV.map((item) => {
@@ -32,7 +34,7 @@ function DesktopNavLinks({ pathname }: { pathname: string | null }) {
               )}
             >
               <Icon className={cn("h-4 w-4", active && "text-accent")} />
-              {item.label}
+              {t.nav[item.label]}
               <span
                 aria-hidden
                 className={cn(
@@ -53,6 +55,7 @@ function ActiveDesktopNav() {
 }
 
 function UserMenu() {
+  const t = useT();
   const user = useCurrentUser();
   const { authReady, currentUserId } = useAppState();
   const router = useRouter();
@@ -81,7 +84,7 @@ function UserMenu() {
     return (
       <Link href="/sign-in" className={buttonClasses("primary", "sm")}>
         <LogIn className="h-4 w-4" />
-        Sign in
+        {t.common.signIn}
       </Link>
     );
   }
@@ -95,7 +98,7 @@ function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label="Account menu"
+        aria-label={t.nav.accountMenu}
         className="flex items-center rounded-full p-0.5 transition hover:ring-2 hover:ring-border-strong"
       >
         <Avatar profile={user} size="sm" />
@@ -111,13 +114,13 @@ function UserMenu() {
           </div>
           <div className="my-1 h-px bg-border" />
           <Link role="menuitem" href="/profile" className={item} onClick={() => setOpen(false)}>
-            <User className="h-4 w-4" /> Profile
+            <User className="h-4 w-4" /> {t.nav.profile}
           </Link>
           <Link role="menuitem" href="/library" className={item} onClick={() => setOpen(false)}>
-            <Library className="h-4 w-4" /> Library
+            <Library className="h-4 w-4" /> {t.nav.library}
           </Link>
           <Link role="menuitem" href="/library/wishlist" className={item} onClick={() => setOpen(false)}>
-            <BookMarked className="h-4 w-4" /> Wishlist
+            <BookMarked className="h-4 w-4" /> {t.nav.wishlist}
           </Link>
           <div className="my-1 h-px bg-border" />
           <button
@@ -127,12 +130,12 @@ function UserMenu() {
             onClick={async () => {
               setOpen(false);
               await signOut();
-              toast("Signed out");
+              toast(t.common.signedOut);
               router.push("/");
               router.refresh();
             }}
           >
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> {t.common.signOut}
           </button>
         </div>
       ) : null}
@@ -141,6 +144,7 @@ function UserMenu() {
 }
 
 export function SiteHeader() {
+  const t = useT();
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-bg/85 backdrop-blur-xl supports-[backdrop-filter]:bg-bg/70">
       <nav aria-label="Main" className="mx-auto flex h-14 max-w-[var(--container-page)] items-center gap-6 px-4 sm:px-6 md:h-16 lg:px-8">
@@ -151,7 +155,7 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-2">
           <Link
             href="/games#search"
-            aria-label="Search games"
+            aria-label={t.common.searchGames}
             className={buttonClasses("ghost", "icon", "h-9 w-9")}
           >
             <Search className="h-4 w-4" />
@@ -159,7 +163,7 @@ export function SiteHeader() {
           <NotificationBell />
           <Link href="/library" className={buttonClasses("ghost", "sm", "max-lg:hidden")}>
             <Library className="h-4 w-4" />
-            Library
+            {t.nav.library}
           </Link>
           <UserMenu />
         </div>

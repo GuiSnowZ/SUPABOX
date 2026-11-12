@@ -16,9 +16,9 @@ import { MAX_REVIEW_LENGTH } from "@/features/app/state";
 import { actions, registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { isReleasedOn, todayIso } from "@/lib/catalog/rows";
-import { STATUS_LABEL } from "@/lib/library";
 import { cn, releaseYear } from "@/lib/utils";
 import type { Game } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
 /**
  * One game in the carousel: Want to Play, or Already Played → stars + review → Add.
@@ -26,6 +26,8 @@ import type { Game } from "@/types";
  * library as played) together with the rating/review, using the normal actions.
  */
 function GameSlide({ game, label }: { game: Game; label?: string | null }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const userId = state.currentUserId;
   const entry = getUserGame(state, userId, game.id);
@@ -41,12 +43,12 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
 
   function openPlayed() {
     if (!state.authReady) return;
-    if (!userId) return promptSignIn(`Sign in to add ${game.title} to your profile.`);
+    if (!userId) return promptSignIn(t.carousel.signIn(game.title));
     setPlayed((v) => !v);
   }
 
   async function add() {
-    if (rating === null && !body.trim()) return setError("Give it a rating or write a few words.");
+    if (rating === null && !body.trim()) return setError(t.carousel.needRating);
     setPending(true);
     setError(null);
     registerGames([game]);
@@ -60,20 +62,20 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
     const r = await actions.upsertReview({ gameId: game.id, rating, body, containsSpoilers: false });
     setPending(false);
     if (!r.ok) return setError(r.error);
-    toast(`${game.title} added to your profile`);
+    toast(t.carousel.added(game.title));
     setPlayed(false);
   }
 
   return (
     <div className="flex h-full flex-col items-center px-1 text-center">
       {label ? <p className="mb-2 text-xs font-medium tracking-wide text-accent uppercase">{label}</p> : null}
-      <Link href={`/games/${game.slug}`} className="group relative block w-36 sm:w-44" aria-label={`Open ${game.title}`}>
+      <Link href={`/games/${game.slug}`} className="group relative block w-36 sm:w-44" aria-label={t.carousel.open(game.title)}>
         <GameCover game={game} className="shadow-2xl shadow-black/50 transition group-hover:ring-2 group-hover:ring-accent/60" />
         <CriticScore game={game} className="absolute bottom-2 left-2" />
       </Link>
       <h3 className="mt-4 line-clamp-2 max-w-sm text-lg leading-snug font-semibold">{game.title}</h3>
       <p className="mt-0.5 text-sm text-muted">
-        {releaseYear(game.releaseDate)}
+        {releaseYear(game.releaseDate, locale)}
         {game.developer && !game.developer.startsWith("Unknown") ? ` · ${game.developer}` : ""}
       </p>
       <PlatformBadges platforms={game.platforms} className="mt-2 justify-center" />
@@ -87,13 +89,13 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
           aria-expanded={played}
           className="w-full"
         >
-          <Gamepad2 className="h-4 w-4" /> {released ? "Already played" : "Not out yet"}
+          <Gamepad2 className="h-4 w-4" /> {released ? t.carousel.alreadyPlayed : t.carousel.notOut}
         </Button>
       </div>
 
       {playedStatus && !played ? (
         <p className="mt-3 flex items-center gap-1.5 text-sm text-muted">
-          <Check className="h-4 w-4 text-accent" /> In your profile · {STATUS_LABEL[playedStatus]}
+          <Check className="h-4 w-4 text-accent" /> {t.carousel.inProfile(t.status[playedStatus])}
           {existing?.rating != null ? <StarRating value={existing.rating} size="xs" className="ml-1" /> : null}
         </p>
       ) : null}
@@ -101,16 +103,16 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
       {played ? (
         <div className="animate-fade-in mt-4 w-full max-w-sm space-y-3 rounded-xl border border-border bg-bg p-4 text-left">
           <div>
-            <Label htmlFor={ids.rating}>Your rating</Label>
+            <Label htmlFor={ids.rating}>{t.rating.yourRating}</Label>
             <StarRatingInput id={ids.rating} value={rating} onChange={setRating} />
           </div>
           <div>
-            <Label htmlFor={ids.body}>Review</Label>
+            <Label htmlFor={ids.body}>{t.reviews.review}</Label>
             <Textarea
               id={ids.body}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={`What did you think of ${game.title}? (optional)`}
+              placeholder={t.reviews.placeholder(game.title)}
               maxLength={MAX_REVIEW_LENGTH}
               rows={3}
               className="min-h-20"
@@ -118,7 +120,7 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
           </div>
           <FormError>{error}</FormError>
           <Button onClick={add} disabled={pending} className="w-full">
-            {pending ? "Saving…" : "Add"}
+            {pending ? t.common.saving : t.carousel.add}
           </Button>
         </div>
       ) : null}
@@ -142,6 +144,7 @@ export function GameCarousel({
   labels?: Array<string | null>;
   className?: string;
 }) {
+  const t = useT();
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(initialIndex);
 
@@ -176,7 +179,7 @@ export function GameCarousel({
         ref={track}
         role="region"
         aria-roledescription="carousel"
-        aria-label="Games"
+        aria-label={t.carousel.games}
         tabIndex={0}
         onScroll={(e) => {
           const el = e.currentTarget;
@@ -190,7 +193,7 @@ export function GameCarousel({
             className="w-full shrink-0 snap-center"
             role="group"
             aria-roledescription="slide"
-            aria-label={`${i + 1} of ${games.length}: ${g.title}`}
+            aria-label={t.carousel.slide(i + 1, games.length, g.title)}
             aria-hidden={Math.abs(i - index) > 1 ? true : undefined}
           >
             {Math.abs(i - index) <= 2 ? <GameSlide game={g} label={labels?.[i]} /> : <div className="h-96" />}
@@ -199,7 +202,7 @@ export function GameCarousel({
       </div>
 
       <div className="mt-5 flex items-center justify-center gap-3">
-        <Button variant="secondary" size="icon" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous game">
+        <Button variant="secondary" size="icon" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t.carousel.previous}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <span className="min-w-16 text-center text-sm text-muted tabular-nums" aria-live="polite">
@@ -210,14 +213,14 @@ export function GameCarousel({
           size="icon"
           onClick={() => go(index + 1)}
           disabled={index === games.length - 1}
-          aria-label="Next game"
+          aria-label={t.carousel.next}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
       <p className="mt-2 text-center">
         <Link href={`/games/${games[index]?.slug}`} className="inline-flex items-center gap-1 text-xs text-faint hover:text-fg">
-          Open game page <ExternalLink className="h-3 w-3" />
+          {t.carousel.openPage} <ExternalLink className="h-3 w-3" />
         </Link>
       </p>
     </div>

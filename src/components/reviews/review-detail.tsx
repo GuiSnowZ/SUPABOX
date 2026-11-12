@@ -8,9 +8,11 @@ import { Container, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { getProfileById } from "@/features/app/selectors";
 import { loaders, useAppState, useLoad } from "@/features/app/store";
 import { ReviewCard } from "./review-card";
+import { useT } from "@/i18n/client";
 
 /** `/reviews/[id]`: one review with likes and its comment thread. */
 export function ReviewDetail({ id }: { id: string }) {
+  const t = useT();
   const state = useAppState();
   const status = useLoad(`review:${id}`, () => loaders.review(id));
   const review = state.reviews.find((r) => r.id === id);
@@ -22,7 +24,7 @@ export function ReviewDetail({ id }: { id: string }) {
     if (status === "ready" && !review) {
       return (
         <Container className="py-16">
-          <EmptyState title="Review not found" description="It may have been deleted." />
+          <EmptyState title={t.reviews.notFound} description={t.reviews.notFoundHint} />
         </Container>
       );
     }

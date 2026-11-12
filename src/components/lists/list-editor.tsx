@@ -13,9 +13,12 @@ import { actions, registerGames, useAppState } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
 import { cn, releaseYear } from "@/lib/utils";
 import type { GameList, ID, ListVisibility } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
 /** Create or edit a list. Any catalog game can be added — not only library games. */
 export function ListEditor({ existing }: { existing?: GameList }) {
+  const t = useT();
+  const locale = useLocale();
   const router = useRouter();
   const state = useAppState();
   const [title, setTitle] = useState(existing?.title ?? "");
@@ -42,12 +45,12 @@ export function ListEditor({ existing }: { existing?: GameList }) {
     if (existing) {
       const r = await actions.updateList(existing.id, input);
       if (!r.ok) return setError(r.error);
-      toast("List saved");
+      toast(t.lists.saved);
       router.push(`/lists/${existing.id}`);
     } else {
       const r = await actions.createList(input);
       if (!r.ok) return setError(r.error);
-      toast("List created");
+      toast(t.lists.created);
       router.push(`/lists/${r.value}`);
     }
   }
@@ -55,32 +58,32 @@ export function ListEditor({ existing }: { existing?: GameList }) {
   return (
     <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1fr_1.3fr]" noValidate>
       <div className="space-y-5">
-        <Field label="Title" htmlFor="list-title">
+        <Field label={t.lists.fieldTitle} htmlFor="list-title">
           <Input
             id="list-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Hidden Gems, Games That Made Me Cry…"
+            placeholder={t.lists.titlePlaceholder}
             maxLength={MAX_LIST_TITLE}
             required
           />
         </Field>
-        <Field label="Description" htmlFor="list-description" hint="Optional">
+        <Field label={t.lists.fieldDescription} htmlFor="list-description" hint={t.common.optional}>
           <Textarea
             id="list-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={MAX_LIST_DESCRIPTION}
-            placeholder="What ties these games together?"
+            placeholder={t.lists.descriptionPlaceholder}
           />
         </Field>
         <fieldset>
-          <legend className="mb-1.5 text-sm font-medium">Visibility</legend>
+          <legend className="mb-1.5 text-sm font-medium">{t.lists.visibility}</legend>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ["public", Globe, "Public", "Anyone can see it"],
-                ["private", Lock, "Private", "Only you can see it"],
+                ["public", Globe, t.lists.public, t.lists.publicHint],
+                ["private", Lock, t.lists.private, t.lists.privateHint],
               ] as const
             ).map(([value, Icon, label, hint]) => (
               <label
@@ -108,16 +111,16 @@ export function ListEditor({ existing }: { existing?: GameList }) {
         </fieldset>
         <FormError>{error}</FormError>
         <div className="flex gap-2">
-          <Button type="submit">{existing ? "Save list" : "Create list"}</Button>
+          <Button type="submit">{existing ? t.lists.saveList : t.lists.createList}</Button>
           <Button variant="ghost" onClick={() => router.back()}>
-            Cancel
+            {t.common.cancel}
           </Button>
         </div>
       </div>
 
       <div>
         <p className="mb-1.5 text-sm font-medium">
-          Games <span className="text-faint">({gameIds.length})</span>
+          {t.nav.games} <span className="text-faint">({gameIds.length})</span>
         </p>
         <GamePicker
           onPick={(g) => {
@@ -128,7 +131,7 @@ export function ListEditor({ existing }: { existing?: GameList }) {
         />
         <Card className="mt-3">
           {gameIds.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-muted">Search above to add games to your list.</p>
+            <p className="px-4 py-10 text-center text-sm text-muted">{t.lists.addHint}</p>
           ) : (
             <ol className="divide-y divide-border">
               {gameIds.map((id, i) => {
@@ -140,9 +143,9 @@ export function ListEditor({ existing }: { existing?: GameList }) {
                     <GameCover game={g} showTitle={false} className="w-9 shrink-0" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{g.title}</span>
-                      <span className="block text-xs text-faint">{releaseYear(g.releaseDate)}</span>
+                      <span className="block text-xs text-faint">{releaseYear(g.releaseDate, locale)}</span>
                     </span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${g.title} up`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t.lists.moveUp(g.title)}>
                       <ArrowUp className="h-4 w-4" />
                     </Button>
                     <Button
@@ -151,7 +154,7 @@ export function ListEditor({ existing }: { existing?: GameList }) {
                       className="h-8 w-8"
                       onClick={() => move(i, 1)}
                       disabled={i === gameIds.length - 1}
-                      aria-label={`Move ${g.title} down`}
+                      aria-label={t.lists.moveDown(g.title)}
                     >
                       <ArrowDown className="h-4 w-4" />
                     </Button>
@@ -160,7 +163,7 @@ export function ListEditor({ existing }: { existing?: GameList }) {
                       size="icon"
                       className="h-8 w-8 hover:text-danger"
                       onClick={() => setGameIds((ids) => ids.filter((x) => x !== id))}
-                      aria-label={`Remove ${g.title}`}
+                      aria-label={t.lists.remove(g.title)}
                     >
                       <X className="h-4 w-4" />
                     </Button>

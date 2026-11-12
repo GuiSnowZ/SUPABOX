@@ -1,4 +1,7 @@
-import { cn, pluralize } from "@/lib/utils";
+"use client";
+
+import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import type { Game } from "@/types";
 
 /** Colour tier commonly used for 0–100 critic scores. */
@@ -21,8 +24,9 @@ export function CriticScore({
   variant?: "badge" | "full";
   className?: string;
 }) {
+  const t = useT();
   if (game.criticScore === null) return null;
-  const label = `Critic score ${game.criticScore} out of 100, from ${pluralize(game.criticCount, "review")}`;
+  const label = t.critic.badge(game.criticScore, game.criticCount);
 
   if (variant === "badge") {
     return (
@@ -52,10 +56,8 @@ export function CriticScore({
         {game.criticScore}
       </span>
       <span className="text-sm leading-tight">
-        <span className="block font-medium text-fg">Critic score</span>
-        <span className="block text-xs text-muted">
-          Average of {pluralize(game.criticCount, "review")}
-        </span>
+        <span className="block font-medium text-fg">{t.critic.title}</span>
+        <span className="block text-xs text-muted">{t.critic.average(game.criticCount)}</span>
       </span>
     </div>
   );

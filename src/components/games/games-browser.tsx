@@ -8,8 +8,9 @@ import { RegisterGames } from "@/components/games/register-games";
 import { Input } from "@/components/ui/form";
 import { EmptyState, SectionHeader } from "@/components/ui/primitives";
 import { useGameSearch } from "@/hooks/use-game-search";
-import { pluralize } from "@/lib/utils";
+
 import type { Game } from "@/types";
+import { useT } from "@/i18n/client";
 
 /**
  * Games discovery: search + Recently Released + Out Today + Coming Soon.
@@ -17,6 +18,7 @@ import type { Game } from "@/types";
  * (our catalog first, then IGDB).
  */
 export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[]; upcoming: Game[]; today?: Game[] }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +39,7 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
       <RegisterGames games={[...recent, ...today, ...upcoming]} />
       <div id="search" className="relative mb-10 max-w-xl scroll-mt-24">
         <label htmlFor="games-search" className="sr-only">
-          Search games
+          {t.common.searchGames}
         </label>
         <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-faint" />
         <Input
@@ -47,7 +49,7 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && setQuery("")}
-          placeholder="Search any game by title"
+          placeholder={t.games.searchPlaceholder}
           className="h-12 rounded-xl pr-10 pl-10 text-base"
           autoComplete="off"
         />
@@ -58,7 +60,7 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
               setQuery("");
               inputRef.current?.focus();
             }}
-            aria-label="Clear search"
+            aria-label={t.games.clearSearch}
             className="absolute top-1/2 right-3 -translate-y-1/2 rounded p-1 text-faint hover:text-fg"
           >
             <X className="h-4 w-4" />
@@ -70,11 +72,11 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
         <section aria-labelledby="results-heading" aria-live="polite" aria-busy={search.status === "loading"}>
           <SectionHeader
             id="results-heading"
-            title={`Results for “${query.trim()}”`}
+            title={t.games.resultsFor(query.trim())}
             count={search.status === "done" ? results.length : undefined}
           />
           {search.status === "error" ? (
-            <EmptyState icon={<AlertTriangle />} title="Search is unavailable" description={search.error} />
+            <EmptyState icon={<AlertTriangle />} title={t.games.searchUnavailable} description={search.error} />
           ) : results.length === 0 && search.status !== "done" ? (
             <GameGridSkeleton count={6} />
           ) : results.length ? (
@@ -86,16 +88,16 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
           ) : (
             <EmptyState
               icon={<SearchX />}
-              title="No games found"
-              description="Try a different spelling, or the game's full title."
+              title={t.games.noResults}
+              description={t.games.noResultsHint}
             />
           )}
         </section>
       ) : (
         <div className="space-y-14">
           <section aria-labelledby="recent-heading">
-            <SectionHeader id="recent-heading" title="Recently Released" href="/games/new-releases" linkLabel="See all" />
-            <p className="-mt-2 mb-5 text-xs text-faint">The biggest releases of the last two months, most popular first.</p>
+            <SectionHeader id="recent-heading" title={t.games.recentlyReleased} href="/games/new-releases" />
+            <p className="-mt-2 mb-5 text-xs text-faint">{t.games.recentHint}</p>
             {recent.length ? (
               <GameGrid>
                 {recent.map((g) => (
@@ -104,23 +106,23 @@ export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[];
               </GameGrid>
             ) : (
               <EmptyState
-                title="No recent releases yet"
-                description="The game catalog hasn't been loaded. Run the catalog sync to import games."
+                title={t.games.noRecent}
+                description={t.games.noRecentHint}
               />
             )}
           </section>
           <TodaysReleases games={today} />
           {upcoming.length ? (
             <section aria-labelledby="upcoming-heading">
-              <SectionHeader id="upcoming-heading" title="Coming Soon" href="/games/coming-soon" linkLabel="See all" />
-              <p className="-mt-2 mb-5 text-xs text-faint">The most anticipated games of the next six months.</p>
+              <SectionHeader id="upcoming-heading" title={t.games.comingSoon} href="/games/coming-soon" />
+              <p className="-mt-2 mb-5 text-xs text-faint">{t.games.comingSoonHint}</p>
               <GameGrid>
                 {upcoming.map((g) => (
                   <GameCard key={g.id} game={g} />
                 ))}
               </GameGrid>
               <p className="mt-4 text-xs text-faint">
-                {pluralize(upcoming.length, "upcoming game")} — save them to your wishlist to keep track.
+                {t.games.upcomingCount(upcoming.length)}
               </p>
             </section>
           ) : null}

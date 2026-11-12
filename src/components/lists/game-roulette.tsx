@@ -11,8 +11,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { getWishlist } from "@/features/app/selectors";
 import { registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn } from "@/features/app/ui-store";
-import { cn, pluralize, releaseYear } from "@/lib/utils";
+import { cn, releaseYear } from "@/lib/utils";
 import type { Game } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
 /** A roulette wheel: eight coloured segments, a hub and a pointer. */
 export function RouletteIcon({ className, spinning = false }: { className?: string; spinning?: boolean }) {
@@ -51,6 +52,8 @@ type Phase = { kind: "choose" } | { kind: "spinning"; source: Source; shown: Gam
  * the classics catalogue, with a short slot-machine style spin.
  */
 export function GameRoulette({ classics }: { classics: Game[] }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choose" });
@@ -69,7 +72,7 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
   }
 
   function spin(source: Source) {
-    if (source === "wishlist" && !userId) return promptSignIn("Sign in to spin your Want to Play list.");
+    if (source === "wishlist" && !userId) return promptSignIn(t.roulette.signIn);
     const pool = source === "wishlist" ? wishlist : classics;
     if (!pool.length) return;
     registerGames(pool);
@@ -99,14 +102,14 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
       >
         <RouletteIcon className="h-16 w-16 shrink-0 transition-transform duration-500 group-hover:rotate-45 sm:h-20 sm:w-20" />
         <span className="min-w-0">
-          <span className="block text-lg font-semibold text-fg">Game Roulette</span>
+          <span className="block text-lg font-semibold text-fg">{t.roulette.title}</span>
           <span className="mt-0.5 block text-sm text-muted">
-            Can&apos;t decide what to play? Spin for a random pick from your Want to Play list or the classics.
+            {t.roulette.cta}
           </span>
         </span>
       </button>
 
-      <Dialog open={open} onClose={close} title="Game Roulette" description="Let fate pick your next game.">
+      <Dialog open={open} onClose={close} title={t.roulette.title} description={t.roulette.subtitle}>
         {phase.kind === "choose" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <button
@@ -116,13 +119,13 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
               className="rounded-xl border border-border p-4 text-left transition-colors hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border"
             >
               <BookMarked className="h-6 w-6 text-info" />
-              <span className="mt-3 block font-semibold">Want to Play</span>
+              <span className="mt-3 block font-semibold">{t.roulette.wantToPlay}</span>
               <span className="mt-1 block text-sm text-muted">
                 {!userId
-                  ? "Pick from your wishlist (sign in)."
+                  ? t.roulette.wantSignedOut
                   : wishlist.length
-                    ? `A random pick from your ${pluralize(wishlist.length, "saved game")}.`
-                    : "Your Want to Play list is empty — save some games first."}
+                    ? t.roulette.wantCount(wishlist.length)
+                    : t.roulette.wantEmpty}
               </span>
             </button>
             <button
@@ -132,11 +135,11 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
               className="rounded-xl border border-border p-4 text-left transition-colors hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Crown className="h-6 w-6 text-star" />
-              <span className="mt-3 block font-semibold">Classic Games</span>
+              <span className="mt-3 block font-semibold">{t.roulette.classics}</span>
               <span className="mt-1 block text-sm text-muted">
                 {classics.length
-                  ? `A random pick from ${classics.length} all-time classics.`
-                  : "The classics catalogue isn't available right now."}
+                  ? t.roulette.classicsCount(classics.length)
+                  : t.roulette.classicsEmpty}
               </span>
             </button>
           </div>
@@ -150,24 +153,24 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
           </div>
         ) : (
           <div className="flex flex-col items-center text-center" aria-live="polite">
-            <p className="text-xs font-semibold tracking-[0.12em] text-accent uppercase">Your next game</p>
+            <p className="text-xs font-semibold tracking-[0.12em] text-accent uppercase">{t.roulette.yourNext}</p>
             <Link href={`/games/${phase.game.slug}`} className="mt-3 block w-40" onClick={close}>
               <GameCover game={phase.game} className="shadow-2xl shadow-accent/20 ring-2 ring-accent/60" />
             </Link>
             <h3 className="mt-4 text-xl font-semibold">{phase.game.title}</h3>
-            <p className="text-sm text-muted">{releaseYear(phase.game.releaseDate)}</p>
+            <p className="text-sm text-muted">{releaseYear(phase.game.releaseDate, locale)}</p>
             <PlatformBadges platforms={phase.game.platforms} className="mt-2 justify-center" />
             <div className="mt-5 grid w-full max-w-sm grid-cols-2 gap-2">
               <Link href={`/games/${phase.game.slug}`} onClick={close} className={buttonClasses("primary", "md")}>
-                <ExternalLink className="h-4 w-4" /> Open game
+                <ExternalLink className="h-4 w-4" /> {t.roulette.openGame}
               </Link>
               <Button variant="secondary" onClick={() => spin(phase.source)}>
-                <RotateCcw className="h-4 w-4" /> Spin again
+                <RotateCcw className="h-4 w-4" /> {t.roulette.spinAgain}
               </Button>
               {phase.source === "classics" ? <WishlistButton game={phase.game} variant="full" className="col-span-2 w-full" /> : null}
             </div>
             <button type="button" onClick={() => setPhase({ kind: "choose" })} className="mt-4 text-sm text-faint hover:text-fg">
-              Choose another source
+              {t.roulette.otherSource}
             </button>
           </div>
         )}

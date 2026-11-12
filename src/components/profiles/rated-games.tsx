@@ -23,11 +23,15 @@ import {
 } from "@/lib/rated-games";
 import { formatShortDate } from "@/lib/utils";
 import type { ID } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
+import { genreName } from "@/i18n/genres";
 
 const PAGE = 12;
 
 /** Every game this user rated, with sorting and filters. Works on any profile. */
 export function RatedGames({ userId }: { userId: ID }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const ids = { sort: useId(), rating: useId(), genre: useId(), platform: useId() };
   const [options, setOptions] = useState<RatedOptions>(DEFAULT_RATED_OPTIONS);
@@ -53,15 +57,15 @@ export function RatedGames({ userId }: { userId: ID }) {
 
   return (
     <section aria-labelledby="ratings-heading">
-      <SectionHeader id="ratings-heading" title="Ratings" count={all.length} />
+      <SectionHeader id="ratings-heading" title={t.ratings.title} count={all.length} />
       {all.length === 0 ? (
-        <p className="text-sm text-muted">No ratings yet.</p>
+        <p className="text-sm text-muted">{t.ratings.none}</p>
       ) : (
         <>
           <div className="mb-5 flex flex-wrap items-end gap-2">
             <div>
               <label htmlFor={ids.sort} className="mb-1 block text-xs font-medium text-muted">
-                Sort by
+                {t.ratings.sortBy}
               </label>
               <Select
                 id={ids.sort}
@@ -69,9 +73,9 @@ export function RatedGames({ userId }: { userId: ID }) {
                 onChange={(e) => update({ sort: e.target.value as RatedSort })}
                 className="w-auto"
               >
-                {Object.entries(RATED_SORTS).map(([value, label]) => (
+                {(Object.keys(RATED_SORTS) as RatedSort[]).map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t.ratings.sorts[value]}
                   </option>
                 ))}
               </Select>
@@ -83,11 +87,12 @@ export function RatedGames({ userId }: { userId: ID }) {
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((v) => !v)}
             >
-              <SlidersHorizontal className="h-4 w-4" /> Filters{filtered ? " · on" : ""}
+              <SlidersHorizontal className="h-4 w-4" /> {t.ratings.filters}
+              {filtered ? t.ratings.filtersOn : ""}
             </Button>
             {filtered ? (
               <Button variant="ghost" size="sm" className="h-10" onClick={() => update({ rating: "any", genre: null, platform: null })}>
-                Clear
+                {t.ratings.clear}
               </Button>
             ) : null}
           </div>
@@ -96,39 +101,39 @@ export function RatedGames({ userId }: { userId: ID }) {
             <div className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-border bg-bg-subtle p-4 sm:grid-cols-3">
               <div>
                 <label htmlFor={ids.rating} className="mb-1 block text-xs font-medium text-muted">
-                  Rating
+                  {t.ratings.rating}
                 </label>
                 <Select id={ids.rating} value={options.rating} onChange={(e) => update({ rating: e.target.value as RatingFilter })}>
-                  {Object.entries(RATING_FILTERS).map(([value, label]) => (
+                  {(Object.keys(RATING_FILTERS) as RatingFilter[]).map((value) => (
                     <option key={value} value={value}>
-                      {label}
+                      {t.ratings.ratingFilters[value]}
                     </option>
                   ))}
                 </Select>
               </div>
               <div>
                 <label htmlFor={ids.genre} className="mb-1 block text-xs font-medium text-muted">
-                  Genre
+                  {t.ratings.genre}
                 </label>
                 <Select id={ids.genre} value={options.genre ?? ""} onChange={(e) => update({ genre: e.target.value || null })}>
-                  <option value="">All genres</option>
+                  <option value="">{t.ratings.allGenres}</option>
                   {facets.genres.map((g) => (
                     <option key={g} value={g}>
-                      {g}
+                      {genreName(g, locale)}
                     </option>
                   ))}
                 </Select>
               </div>
               <div>
                 <label htmlFor={ids.platform} className="mb-1 block text-xs font-medium text-muted">
-                  Platform
+                  {t.ratings.platform}
                 </label>
                 <Select
                   id={ids.platform}
                   value={options.platform ?? ""}
                   onChange={(e) => update({ platform: e.target.value || null })}
                 >
-                  <option value="">All platforms</option>
+                  <option value="">{t.ratings.allPlatforms}</option>
                   {facets.platforms.map((p) => (
                     <option key={p} value={p}>
                       {p}
@@ -140,7 +145,7 @@ export function RatedGames({ userId }: { userId: ID }) {
           ) : null}
 
           {arranged.length === 0 ? (
-            <p className="text-sm text-muted">No rated games match these filters.</p>
+            <p className="text-sm text-muted">{t.ratings.noMatch}</p>
           ) : (
             <ul className="grid grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-6">
               {arranged.slice(0, shown).map(({ game: g, review: r }) => (
@@ -151,7 +156,7 @@ export function RatedGames({ userId }: { userId: ID }) {
                   </Link>
                   <StarRating value={r.rating} size="xs" className="mt-1" />
                   <p className="mt-0.5 text-xs text-faint">
-                    <time dateTime={r.updatedAt}>{formatShortDate(r.updatedAt)}</time>
+                    <time dateTime={r.updatedAt}>{formatShortDate(r.updatedAt, locale)}</time>
                   </p>
                 </li>
               ))}
@@ -160,7 +165,7 @@ export function RatedGames({ userId }: { userId: ID }) {
           {arranged.length > shown ? (
             <div className="mt-6 text-center">
               <Button variant="secondary" size="sm" onClick={() => setShown((n) => n + PAGE * 2)}>
-                Show more ({arranged.length - shown} left)
+                {t.ratings.showMore(arranged.length - shown)}
               </Button>
             </div>
           ) : null}

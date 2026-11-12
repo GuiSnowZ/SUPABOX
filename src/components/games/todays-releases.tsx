@@ -1,15 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import { SectionHeader } from "@/components/ui/primitives";
 import type { Game } from "@/types";
+import { useT } from "@/i18n/client";
 import { GameCover } from "./game-cover";
 import { PlatformBadges } from "./platform-badges";
 
 /** "Out today": cover, title and platforms of games released today. Hidden on days with none. */
 export function TodaysReleases({ games }: { games: Game[] }) {
+  const t = useT();
   if (!games.length) return null;
   return (
     <section aria-labelledby="today-heading">
-      <SectionHeader id="today-heading" title="Out Today" count={games.length} />
+      <SectionHeader id="today-heading" title={t.games.outToday} count={games.length} />
       <ul className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-6">
         {games.map((g) => (
           <li key={g.id} className="w-32 shrink-0 snap-start sm:w-auto">

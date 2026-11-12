@@ -14,49 +14,51 @@ import {
 } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 type Tab = "mine" | "following";
 
 export function ReviewsView() {
+  const t = useT();
   const state = useAppState();
   const [tab, setTab] = useState<Tab>("mine");
 
   return (
-    <RequireUser message="Sign in to see your reviews and reviews from people you follow.">
+    <RequireUser message={t.reviews.signIn}>
       {(user) => {
         const mine = getReviewsByUser(state, user.id);
         const following = getFollowingReviews(state, user.id);
         const followsAnyone = getFollowingIds(state, user.id).length > 0;
         const tabs: Array<{ key: Tab; label: string; count: number }> = [
-          { key: "mine", label: "My Reviews", count: mine.length },
-          { key: "following", label: "Following", count: following.length },
+          { key: "mine", label: t.reviews.mine, count: mine.length },
+          { key: "following", label: t.reviews.following, count: following.length },
         ];
         const reviews = tab === "mine" ? mine : following;
 
         return (
           <Container className="max-w-4xl">
-            <PageHeader title="Reviews" description="Your thoughts, and what the people you follow are saying." />
-            <div role="tablist" aria-label="Review views" className="mb-2 flex gap-6 border-b border-border">
-              {tabs.map((t) => (
+            <PageHeader title={t.reviews.title} description={t.reviews.description} />
+            <div role="tablist" aria-label={t.reviews.tabsLabel} className="mb-2 flex gap-6 border-b border-border">
+              {tabs.map((item) => (
                 <button
-                  key={t.key}
-                  id={`tab-${t.key}`}
+                  key={item.key}
+                  id={`tab-${item.key}`}
                   type="button"
                   role="tab"
-                  aria-selected={tab === t.key}
-                  aria-controls={`panel-${t.key}`}
-                  onClick={() => setTab(t.key)}
+                  aria-selected={tab === item.key}
+                  aria-controls={`panel-${item.key}`}
+                  onClick={() => setTab(item.key)}
                   className={cn(
                     "-mb-px border-b-2 pb-3 text-sm font-medium transition-colors",
-                    tab === t.key ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg",
+                    tab === item.key ? "border-accent text-fg" : "border-transparent text-muted hover:text-fg",
                   )}
                 >
-                  {t.label} <span className="ml-1 text-faint">{t.count}</span>
+                  {item.label} <span className="ml-1 text-faint">{item.count}</span>
                 </button>
               ))}
             </div>
             <p className="mb-2 text-xs text-faint">
-              {tab === "mine" ? "Most recently published or edited first." : "Newest first."}
+              {tab === "mine" ? t.reviews.mineOrder : t.reviews.followingOrder}
             </p>
             <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
               {reviews.length ? (
@@ -73,21 +75,21 @@ export function ReviewsView() {
                 <EmptyState
                   className="mt-4"
                   icon={<PenLine />}
-                  title="You haven't written any reviews"
-                  description="Open any game you've played and rate or review it."
-                  action={<ButtonLink href="/games">Find a game</ButtonLink>}
+                  title={t.reviews.noneMine}
+                  description={t.reviews.noneMineHint}
+                  action={<ButtonLink href="/games">{t.reviews.findGame}</ButtonLink>}
                 />
               ) : (
                 <EmptyState
                   className="mt-4"
                   icon={<Users />}
-                  title={followsAnyone ? "No reviews from people you follow yet" : "You're not following anyone yet"}
+                  title={followsAnyone ? t.reviews.noneFollowing : t.reviews.notFollowing}
                   description={
                     followsAnyone
-                      ? "When people you follow publish reviews, they'll show up here."
-                      : "Follow other players from their profiles to see their reviews here."
+                      ? t.reviews.noneFollowingHint
+                      : t.reviews.notFollowingHint
                   }
-                  action={<ButtonLink href="/lists">Discover players through lists</ButtonLink>}
+                  action={<ButtonLink href="/lists">{t.reviews.discover}</ButtonLink>}
                 />
               )}
             </div>

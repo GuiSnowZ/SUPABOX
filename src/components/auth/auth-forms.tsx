@@ -18,6 +18,7 @@ import {
 } from "@/features/app/auth";
 import { useAppState } from "@/features/app/store";
 import { toast } from "@/features/app/ui-store";
+import { useT } from "@/i18n/client";
 
 function Shell({
   title,
@@ -53,6 +54,7 @@ function Notice({ title, children }: { title: string; children: ReactNode }) {
 
 /** Small hook for async form submission state. */
 function useSubmit() {
+  const t = useT();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
@@ -60,10 +62,10 @@ function useSubmit() {
     setError(null);
     try {
       const r = await fn();
-      if (!r.ok) setError(r.error ?? "Something went wrong.");
+      if (!r.ok) setError(r.error ?? t.auth.unexpected);
       return r.ok;
     } catch {
-      setError("Couldn't reach Supabox. Check your connection and try again.");
+      setError(t.auth.unreachable);
       return false;
     } finally {
       setPending(false);
@@ -73,6 +75,7 @@ function useSubmit() {
 }
 
 export function SignInForm() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
@@ -83,27 +86,27 @@ export function SignInForm() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (await run(() => signIn(email, password))) {
-      toast("Welcome back!");
+      toast(t.auth.welcomeBack);
       router.push("/");
     }
   }
 
   return (
     <Shell
-      title="Sign in"
-      subtitle="Welcome back to your gaming diary."
+      title={t.auth.signInTitle}
+      subtitle={t.auth.signInSubtitle}
       footer={
         <>
-          New to Supabox?{" "}
+          {t.auth.newHere}{" "}
           <Link href="/sign-up" className="font-medium text-accent hover:underline">
-            Create an account
+            {t.auth.createAccountLink}
           </Link>
         </>
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
         {linkError && !error ? <FormError>{linkError}</FormError> : null}
-        <Field label="Email" htmlFor="email">
+        <Field label={t.auth.email} htmlFor="email">
           <Input
             id="email"
             type="email"
@@ -113,7 +116,7 @@ export function SignInForm() {
             onChange={(e) => setEmail(e.target.value)}
           />
         </Field>
-        <Field label="Password" htmlFor="password">
+        <Field label={t.auth.password} htmlFor="password">
           <Input
             id="password"
             type="password"
@@ -125,12 +128,12 @@ export function SignInForm() {
         </Field>
         <div className="text-right">
           <Link href="/forgot-password" className="text-xs text-muted hover:text-fg">
-            Forgot password?
+            {t.auth.forgot}
           </Link>
         </div>
         <FormError>{error}</FormError>
         <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? t.auth.signingIn : t.auth.signInTitle}
         </Button>
       </form>
     </Shell>
@@ -138,6 +141,7 @@ export function SignInForm() {
 }
 
 export function SignUpForm() {
+  const t = useT();
   const router = useRouter();
   const [form, setForm] = useState({ username: "", displayName: "", email: "", password: "" });
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -163,9 +167,10 @@ export function SignUpForm() {
 
   if (sentTo) {
     return (
-      <Shell title="Check your email" subtitle="One more step to finish creating your account.">
-        <Notice title="Confirmation link sent">
-          We sent a link to <span className="text-fg">{sentTo}</span>. Open it on this device to activate your account.
+      <Shell title={t.auth.checkEmailTitle} subtitle={t.auth.checkEmailSubtitle}>
+        <Notice title={t.auth.confirmationSent}>
+          {t.auth.sentToBefore} <span className="text-fg">{sentTo}</span>
+          {t.auth.sentToAfter}
         </Notice>
       </Shell>
     );
@@ -173,26 +178,26 @@ export function SignUpForm() {
 
   return (
     <Shell
-      title="Create your account"
-      subtitle="Start tracking the games that make your story."
+      title={t.auth.signUpTitle}
+      subtitle={t.auth.signUpSubtitle}
       footer={
         <>
-          Already have an account?{" "}
+          {t.auth.haveAccount}{" "}
           <Link href="/sign-in" className="font-medium text-accent hover:underline">
-            Sign in
+            {t.common.signIn}
           </Link>
         </>
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <Field
-          label="Username"
+          label={t.auth.username}
           htmlFor="username"
           hint={
             usernameValid ? (
-              <>Your profile will live at /users/{form.username || "username"}.</>
+              <>{t.auth.usernameHint(form.username)}</>
             ) : (
-              <span className="text-danger">3–30 characters: lowercase letters, numbers and underscores.</span>
+              <span className="text-danger">{t.auth.usernameRule}</span>
             )
           }
         >
@@ -206,13 +211,13 @@ export function SignUpForm() {
             aria-invalid={!usernameValid}
           />
         </Field>
-        <Field label="Display name" htmlFor="displayName" hint="Optional. You can change it later.">
+        <Field label={t.auth.displayName} htmlFor="displayName" hint={t.auth.displayNameHint}>
           <Input id="displayName" autoComplete="nickname" maxLength={50} value={form.displayName} onChange={set("displayName")} />
         </Field>
-        <Field label="Email" htmlFor="email">
+        <Field label={t.auth.email} htmlFor="email">
           <Input id="email" type="email" autoComplete="email" required value={form.email} onChange={set("email")} />
         </Field>
-        <Field label="Password" htmlFor="password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+        <Field label={t.auth.password} htmlFor="password" hint={t.auth.passwordHint(MIN_PASSWORD_LENGTH)}>
           <Input
             id="password"
             type="password"
@@ -225,16 +230,16 @@ export function SignUpForm() {
         </Field>
         <FormError>{error}</FormError>
         <Button type="submit" className="w-full" disabled={pending || !usernameValid}>
-          {pending ? "Creating account…" : "Create account"}
+          {pending ? t.auth.creating : t.auth.create}
         </Button>
         <p className="text-center text-xs text-faint">
-          By creating an account you agree to the{" "}
+          {t.auth.agreeBefore}{" "}
           <Link href="/terms" className="text-muted underline-offset-2 hover:underline">
-            Terms of Service
+            {t.auth.termsLink}
           </Link>{" "}
-          and{" "}
+          {t.auth.and}{" "}
           <Link href="/privacy" className="text-muted underline-offset-2 hover:underline">
-            Privacy Policy
+            {t.auth.privacyLink}
           </Link>
           .
         </p>
@@ -244,23 +249,25 @@ export function SignUpForm() {
 }
 
 export function ForgotPasswordForm() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const { pending, error, run } = useSubmit();
 
   return (
     <Shell
-      title="Reset your password"
-      subtitle="We'll email you a link to choose a new password."
+      title={t.auth.resetTitle}
+      subtitle={t.auth.resetSubtitle}
       footer={
         <Link href="/sign-in" className="font-medium text-accent hover:underline">
-          Back to sign in
+          {t.auth.backToSignIn}
         </Link>
       }
     >
       {sent ? (
-        <Notice title="Check your email">
-          If an account exists for <span className="text-fg">{email}</span>, a reset link is on its way.
+        <Notice title={t.auth.checkEmailTitle}>
+          {t.auth.resetSentBefore} <span className="text-fg">{email}</span>
+          {t.auth.resetSentAfter}
         </Notice>
       ) : (
         <form
@@ -270,12 +277,12 @@ export function ForgotPasswordForm() {
           }}
           className="space-y-4"
         >
-          <Field label="Email" htmlFor="email">
+          <Field label={t.auth.email} htmlFor="email">
             <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
           <FormError>{error}</FormError>
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Sending…" : "Send reset link"}
+            {pending ? t.auth.sending : t.auth.sendLink}
           </Button>
         </form>
       )}
@@ -284,6 +291,7 @@ export function ForgotPasswordForm() {
 }
 
 export function UpdatePasswordForm() {
+  const t = useT();
   const router = useRouter();
   const state = useAppState();
   const [password, setPassword] = useState("");
@@ -291,34 +299,34 @@ export function UpdatePasswordForm() {
 
   if (!state.authReady) {
     return (
-      <Shell title="Choose a new password" subtitle="Loading…">
+      <Shell title={t.auth.newPasswordTitle} subtitle={t.common.loading}>
         <Skeleton className="h-24 w-full" />
       </Shell>
     );
   }
   if (!state.currentUserId) {
     return (
-      <Shell title="Choose a new password" subtitle="Your reset link has expired or was opened on another device.">
+      <Shell title={t.auth.newPasswordTitle} subtitle={t.auth.linkExpired}>
         <ButtonLink href="/forgot-password" className="w-full">
-          Request a new link
+          {t.auth.requestNewLink}
         </ButtonLink>
       </Shell>
     );
   }
 
   return (
-    <Shell title="Choose a new password" subtitle="Pick something you don't use anywhere else.">
+    <Shell title={t.auth.newPasswordTitle} subtitle={t.auth.newPasswordSubtitle}>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
           if (await run(() => updatePassword(password))) {
-            toast("Password updated");
+            toast(t.auth.passwordUpdated);
             router.push("/profile");
           }
         }}
         className="space-y-4"
       >
-        <Field label="New password" htmlFor="password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+        <Field label={t.auth.newPassword} htmlFor="password" hint={t.auth.passwordHint(MIN_PASSWORD_LENGTH)}>
           <Input
             id="password"
             type="password"
@@ -331,7 +339,7 @@ export function UpdatePasswordForm() {
         </Field>
         <FormError>{error}</FormError>
         <Button type="submit" className="w-full" disabled={pending}>
-          {pending ? "Saving…" : "Save password"}
+          {pending ? t.common.saving : t.auth.savePassword}
         </Button>
       </form>
     </Shell>

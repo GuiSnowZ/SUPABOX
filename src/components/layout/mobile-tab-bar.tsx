@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 import { Fragment, Suspense } from "react";
 import { QuickAddButton } from "@/components/games/quick-add";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import { isActive, PRIMARY_NAV } from "./nav-config";
 
 function Tabs({ pathname }: { pathname: string | null }) {
+  const t = useT();
   return (
     <ul className="grid grid-cols-5">
       {PRIMARY_NAV.map((item, i) => {
@@ -30,7 +32,7 @@ function Tabs({ pathname }: { pathname: string | null }) {
                 )}
               >
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 2} />
-                {item.label}
+                {t.nav[item.label]}
               </Link>
             </li>
           </Fragment>

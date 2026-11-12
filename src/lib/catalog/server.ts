@@ -3,7 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { getIgdbClient } from "@/lib/igdb/client";
 import { fetchGameRows, type GameRow, igdbSearchTerm, PLAYABLE_GAME_TYPES } from "@/lib/igdb/map";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { getPublicSupabase } from "@/lib/supabase/public";
+import { createPublicSupabase } from "@/lib/supabase/public";
 import type { Game } from "@/types";
 import { GAME_COLUMNS, type GameDbRow, SITE_TIME_ZONE, sortByReleaseBuzz, todayIn, todayIso, toGame } from "./rows";
 
@@ -20,7 +20,7 @@ const RECENT_WINDOW_DAYS = 60;
 const UPCOMING_WINDOW_DAYS = 180;
 
 function db() {
-  const client = getPublicSupabase();
+  const client = createPublicSupabase();
   if (!client) throw new Error("Supabase is not configured.");
   return client;
 }

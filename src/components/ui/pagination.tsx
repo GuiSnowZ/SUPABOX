@@ -1,6 +1,9 @@
+"use client";
+
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 
 /** Page numbers to show: all when few, otherwise first, last and a window around the current page. */
 export function pageWindow(current: number, total: number): Array<number | "…"> {
@@ -22,13 +25,14 @@ const item =
 
 /** Numbered pagination as plain links (?page=N), so pages are shareable and work without JavaScript. */
 export function Pagination({ basePath, page, pages }: { basePath: string; page: number; pages: number }) {
+  const t = useT();
   if (pages <= 1) return null;
   const href = (p: number) => (p === 1 ? basePath : `${basePath}?page=${p}`);
   return (
-    <nav aria-label="Pagination" className="mt-12 flex flex-wrap items-center justify-center gap-1.5">
+    <nav aria-label={t.games.pagination} className="mt-12 flex flex-wrap items-center justify-center gap-1.5">
       {page > 1 ? (
         <Link href={href(page - 1)} className={cn(item, "text-muted hover:bg-surface hover:text-fg")} rel="prev">
-          <ChevronLeft className="h-4 w-4" /> <span className="max-sm:sr-only">Previous</span>
+          <ChevronLeft className="h-4 w-4" /> <span className="max-sm:sr-only">{t.games.previous}</span>
         </Link>
       ) : null}
       {pageWindow(page, pages).map((p, i) =>
@@ -41,7 +45,7 @@ export function Pagination({ basePath, page, pages }: { basePath: string; page: 
             key={p}
             href={href(p)}
             aria-current={p === page ? "page" : undefined}
-            aria-label={`Page ${p}`}
+            aria-label={t.games.pageLabel(p)}
             className={cn(
               item,
               p === page ? "bg-accent text-accent-fg" : "border border-border text-muted hover:border-border-strong hover:text-fg",
@@ -53,7 +57,7 @@ export function Pagination({ basePath, page, pages }: { basePath: string; page: 
       )}
       {page < pages ? (
         <Link href={href(page + 1)} className={cn(item, "text-muted hover:bg-surface hover:text-fg")} rel="next">
-          <span className="max-sm:sr-only">Next</span> <ChevronRight className="h-4 w-4" />
+          <span className="max-sm:sr-only">{t.games.next}</span> <ChevronRight className="h-4 w-4" />
         </Link>
       ) : null}
     </nav>

@@ -15,6 +15,7 @@ import { promptSignIn, toast } from "@/features/app/ui-store";
 import { getSupabase } from "@/lib/supabase/client";
 import { timeAgo } from "@/lib/utils";
 import type { ID } from "@/types";
+import { useLocale, useT } from "@/i18n/client";
 
 const MAX_COMMENT = 1000;
 
@@ -23,6 +24,8 @@ const MAX_COMMENT = 1000;
  * the review/list can delete it (the database enforces the same rule).
  */
 export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list"; targetId: ID; ownerId: ID }) {
+  const t = useT();
+  const locale = useLocale();
   const state = useAppState();
   const me = state.currentUserId;
   const [comments, setComments] = useState<CommentItem[] | null>(null);
@@ -48,7 +51,7 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!me) return promptSignIn("Sign in to comment.");
+    if (!me) return promptSignIn(t.social.signInComment);
     const text = body.trim();
     if (!text) return;
     setPending(true);
@@ -77,14 +80,14 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
 
   return (
     <section aria-labelledby={`${inputId}-heading`} className="max-w-2xl">
-      <SectionHeader id={`${inputId}-heading`} title="Comments" count={comments?.length} />
+      <SectionHeader id={`${inputId}-heading`} title={t.social.comments} count={comments?.length} />
       {loadError ? (
-        <p className="text-sm text-danger">Couldn&apos;t load comments: {loadError}</p>
+        <p className="text-sm text-danger">{t.social.loadCommentsError(loadError)}</p>
       ) : comments === null ? (
         <Skeleton className="h-20 w-full" />
       ) : comments.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-muted">
-          <MessageCircle className="h-4 w-4" /> No comments yet. Start the conversation.
+          <MessageCircle className="h-4 w-4" /> {t.social.noComments}
         </p>
       ) : (
         <ul className="space-y-4">
@@ -107,18 +110,18 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
                         {author.displayName}
                       </Link>
                     ) : (
-                      <span className="font-medium text-muted">Someone</span>
+                      <span className="font-medium text-muted">{t.social.someone}</span>
                     )}{" "}
                     <time dateTime={c.createdAt} className="text-xs text-faint">
-                      {timeAgo(c.createdAt)}
+                      {timeAgo(c.createdAt, locale)}
                     </time>
                   </p>
                   <p className="mt-0.5 text-sm leading-relaxed break-words whitespace-pre-line text-fg/90">{c.body}</p>
                 </div>
                 {canDelete ? (
-                  <ConfirmButton prompt="Delete comment?" onConfirm={() => remove(c.id)}>
+                  <ConfirmButton prompt={t.social.deleteComment} onConfirm={() => remove(c.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span className="sr-only">Delete comment</span>
+                    <span className="sr-only">{t.social.deleteCommentLabel}</span>
                   </ConfirmButton>
                 ) : null}
               </li>
@@ -129,14 +132,14 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
 
       <form onSubmit={submit} className="mt-6 space-y-2">
         <label htmlFor={inputId} className="sr-only">
-          Write a comment
+          {t.social.writeComment}
         </label>
         <Textarea
           id={inputId}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          onFocus={() => state.authReady && !me && promptSignIn("Sign in to comment.")}
-          placeholder={me ? "Write a comment…" : "Sign in to comment"}
+          onFocus={() => state.authReady && !me && promptSignIn(t.social.signInComment)}
+          placeholder={me ? t.social.writePlaceholder : t.social.signInPlaceholder}
           maxLength={MAX_COMMENT}
           rows={2}
           className="min-h-16"
@@ -147,7 +150,7 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
             {body.length}/{MAX_COMMENT}
           </span>
           <Button type="submit" size="sm" disabled={pending || !body.trim()}>
-            {pending ? "Posting…" : "Post comment"}
+            {pending ? t.social.posting : t.social.post}
           </Button>
         </div>
       </form>

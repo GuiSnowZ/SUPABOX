@@ -4,8 +4,8 @@ import { Bookmark, BookmarkCheck, Check } from "lucide-react";
 import { getUserGame } from "@/features/app/selectors";
 import { actions, registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
-import { STATUS_LABEL } from "@/lib/library";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/client";
 import type { Game } from "@/types";
 
 /**
@@ -22,6 +22,7 @@ export function WishlistButton({
   variant?: "overlay" | "full";
   className?: string;
 }) {
+  const t = useT();
   const state = useAppState();
   const entry = getUserGame(state, state.currentUserId, game.id);
   const wishlisted = entry?.status === "want_to_play";
@@ -30,24 +31,24 @@ export function WishlistButton({
   async function onClick() {
     if (!state.authReady) return;
     if (!state.currentUserId) {
-      promptSignIn(`Sign in to save ${game.title} to your wishlist.`);
+      promptSignIn(t.wishlist.signIn(game.title));
       return;
     }
     if (otherStatus) {
-      toast(`${game.title} is already in your library as ${STATUS_LABEL[otherStatus]}.`);
+      toast(t.wishlist.alreadyIn(game.title, t.status[otherStatus]));
       return;
     }
     registerGames([game]);
     const result = await actions.toggleWishlist(game.id);
     if (!result.ok) toast(result.error, "error");
-    else toast(wishlisted ? `Removed ${game.title} from your wishlist` : `Added ${game.title} to your wishlist`);
+    else toast(wishlisted ? t.wishlist.removed(game.title) : t.wishlist.added(game.title));
   }
 
   const label = otherStatus
-    ? `${game.title}: ${STATUS_LABEL[otherStatus]}`
+    ? `${game.title}: ${t.status[otherStatus]}`
     : wishlisted
-      ? `Remove ${game.title} from wishlist`
-      : `Add ${game.title} to wishlist`;
+      ? t.wishlist.removeLabel(game.title)
+      : t.wishlist.addLabel(game.title);
 
   const Icon = otherStatus ? Check : wishlisted ? BookmarkCheck : Bookmark;
 
@@ -68,7 +69,7 @@ export function WishlistButton({
         )}
       >
         <Icon className={cn("h-4 w-4", wishlisted && "fill-current")} />
-        {otherStatus ? `In library · ${STATUS_LABEL[otherStatus]}` : wishlisted ? "In Want to Play" : "Want to Play"}
+        {otherStatus ? t.wishlist.inLibrary(t.status[otherStatus]) : wishlisted ? t.wishlist.inWantToPlay : t.wishlist.wantToPlay}
       </button>
     );
   }

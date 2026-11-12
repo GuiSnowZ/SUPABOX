@@ -110,7 +110,7 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 6 — Idiomas
 
-- [ ] **6. Português e inglês (i18n)**
+- [x] **6. Português e inglês (i18n)**
   - Todos os textos saem dos componentes para arquivos de tradução, um por idioma, sem duplicar páginas.
   - O idioma vem da escolha do usuário, depois do navegador, e tem seletor no rodapé.
   - Feita depois das outras fases para traduzir tudo de uma vez só.
