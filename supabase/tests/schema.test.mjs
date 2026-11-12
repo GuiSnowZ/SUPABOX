@@ -187,7 +187,7 @@ ok("can edit own profile", (await db.query("select bio from public.profiles wher
 ok("games are read-only for users", await fails(A, "insert into public.games (slug, title, provider, provider_id) values ('x', 'x', 'm', '1')"));
 
 // Notifications, likes, comments
-const G3 = ids(3)[2], G4 = ids(4)[3], G7 = ids(7)[6];
+const G3 = ids(3)[2], G7 = ids(7)[6];
 const notifs = async (uid) => (await as(uid, "select kind, activity_type, actor_id from public.notifications order by created_at")).rows;
 await as(B, "insert into public.follows (follower_id, following_id) values ($1, $2)", [B, A]);
 await as(A, "insert into public.user_games (user_id, game_id, status) values ($1, $2, 'playing')", [A, G7]);
