@@ -48,7 +48,7 @@ const ts = (y: number) => Math.floor(Date.UTC(y, 0, 1) / 1000);
 // Main games and remakes only: remasters, special editions, DLCs, bundles and ports
 // would duplicate the original in a ranking.
 const BASE = "game_type = (0,8) & version_parent = null & cover != null & first_release_date != null";
-const CAND_FIELDS = "id,name,first_release_date,total_rating,total_rating_count,hypes,franchises.name";
+const CAND_FIELDS = "id,name,slug,first_release_date,total_rating,total_rating_count,hypes,franchises.name";
 
 /** Up to `max` candidates matching `where`, most-rated first. */
 async function candidates(where: string, max = 1000, sort = "total_rating_count desc"): Promise<Candidate[]> {
@@ -93,8 +93,19 @@ interface ListDef {
   build?: () => Promise<ListItem[]>;
 }
 
-const top = (n: number, min: number, where: string, pool = 1000) => async () =>
-  rankByScore(await candidates(`${rated(min)} & ${where}`, pool)).slice(0, n).map((c) => ({ igdbId: c.id }));
+/** Match game names loosely (case, apostrophes and punctuation ignored). */
+const nameKey = (name = "") => name.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * Top `n` games matching `where`. `exclude` names games the IGDB tags put in the
+ * wrong list (reviewed by hand; the criteria text says so). A name excludes
+ * every version of that game (original and remake).
+ */
+const top = (n: number, min: number, where: string, pool = 1000, exclude: string[] = []) => async () =>
+  rankByScore((await candidates(`${rated(min)} & ${where}`, pool)).filter((c) => !exclude.map(nameKey).includes(nameKey(c.name))))
+    .slice(0, n)
+    .map((c) => ({ igdbId: c.id }));
+const REVIEWED = " Games mis-tagged on IGDB are removed by the Supabox team.";
 
 const SCORE_NOTE = `Ranked by IGDB rating (critics and players) weighted by the number of ratings, so a game needs both quality and reach (Bayesian average, prior ${RATING_PRIOR.mean} over ${RATING_PRIOR.weight} ratings).`;
 
@@ -247,32 +258,52 @@ async function buildDefs(): Promise<ListDef[]> {
       title: "Best RPGs of All Time",
       description: "Role-playing games worth sinking a hundred hours into.",
       category: "genres",
-      criteria: `IGDB genre "Role-playing (RPG)", at least 50 ratings. ${SCORE_NOTE}`,
-      build: top(25, 50, "genres = (12)"),
+      criteria: `Role-playing games on IGDB, excluding games that are mainly shooters, hack-and-slash, platformers, strategy or simulation games with RPG elements. At least 50 ratings.${REVIEWED} ${SCORE_NOTE}`,
+      build: top(25, 50, "genres = (12) & genres != (5,25,8,15,16,13)", 1000, ["Dishonored", "Dishonored 2"]),
     },
     {
       slug: "best-horror-games",
       title: "Best Horror Games",
       description: "Play these with the lights on.",
       category: "genres",
-      criteria: `IGDB theme "Horror", at least 40 ratings. ${SCORE_NOTE}`,
-      build: top(25, 40, "themes = (19)"),
+      criteria: `Horror games tagged "survival horror" or "psychological horror" on IGDB — action games that merely have horror elements (hack-and-slash, platformers, fantasy action RPGs) are left out. At least 30 ratings. ${SCORE_NOTE}`,
+      build: top(25, 30, "themes = (19) & keywords = (1836,131) & genres != (12,25,8) & themes != (17)"),
     },
     {
       slug: "best-open-world-games",
       title: "Best Open World Games",
       description: "Huge worlds you can lose yourself in.",
       category: "genres",
-      criteria: `IGDB theme "Open world", at least 50 ratings. ${SCORE_NOTE}`,
-      build: top(25, 50, "themes = (38)"),
+      criteria: `Games from 2001 on with the IGDB "Open world" theme that are either RPGs/adventures or also tagged "Sandbox"/"open-world" (platformers and racing games excluded), at least 60 ratings. Games IGDB mis-tags as open world (linear or hub-based games) are removed by the Supabox team. ${SCORE_NOTE}`,
+      build: async () => {
+        const since = `first_release_date >= ${ts(2001)}`;
+        const pools = await Promise.all([
+          candidates(`${rated(60)} & themes = (38) & genres = (12,31) & genres != (8,10,9) & ${since}`, 1500),
+          candidates(`${rated(60)} & themes = (38) & (themes = (33) | keywords = (54851,57478,51930)) & genres != (8,10) & ${since}`, 1500),
+        ]);
+        const notOpenWorld = new Set(
+          [
+            "Star Wars: Knights of the Old Republic",
+            "Star Wars: Knights of the Old Republic II - The Sith Lords",
+            "Bloodborne",
+            "Batman: Arkham Asylum",
+            "Persona 4",
+            "Demon's Souls",
+            "Dragon Age: Origins",
+            "The Legend of Zelda: A Link Between Worlds",
+          ].map(nameKey),
+        );
+        const unique = [...new Map(pools.flat().map((c) => [c.id, c])).values()].filter((c) => !notOpenWorld.has(nameKey(c.name)));
+        return rankByScore(unique).slice(0, 25).map((c) => ({ igdbId: c.id }));
+      },
     },
     {
       slug: "best-story-driven-games",
       title: "Best Story-Driven Games",
       description: "Games remembered for their stories and characters.",
       category: "genres",
-      criteria: `Games tagged "story rich" or "narrative" by the IGDB community, at least 40 ratings. ${SCORE_NOTE}`,
-      build: top(25, 40, "keywords = (2426,17268)"),
+      criteria: `Adventure games, visual novels and RPGs tagged "story rich", "narrative" or "choices matter" by the IGDB community, excluding action games. At least 40 ratings. ${SCORE_NOTE}`,
+      build: top(25, 40, "keywords = (2426,17268,3534) & genres = (31,34,12) & themes != (1)"),
     },
     {
       slug: "best-indie-games",
@@ -287,24 +318,24 @@ async function buildDefs(): Promise<ListDef[]> {
       title: "Best Multiplayer Games",
       description: "The best games to play with — or against — other people.",
       category: "genres",
-      criteria: `IGDB game mode "Multiplayer" or "MMO", at least 80 ratings. ${SCORE_NOTE}`,
-      build: top(25, 80, "game_modes = (2,5)", 1500),
+      criteria: `Games built to be played with other people: IGDB "Multiplayer" or "MMO" mode and no single-player mode. At least 150 ratings.${REVIEWED} ${SCORE_NOTE}`,
+      build: top(25, 150, "game_modes = (2,5) & game_modes != (1)", 1500, ["Tony Hawk's Pro Skater 3", "TagPro"]),
     },
     {
       slug: "best-co-op-games",
       title: "Best Co-op Games",
       description: "Team up and finish it together.",
       category: "genres",
-      criteria: `IGDB game mode "Co-operative", at least 40 ratings. ${SCORE_NOTE}`,
-      build: top(25, 40, "game_modes = (3)"),
+      criteria: `Games with a co-op campaign that are made for co-op: either tagged "couch co-op"/"local co-op" or with no single-player mode (MMOs excluded). At least 30 ratings. ${SCORE_NOTE}`,
+      build: top(25, 30, "multiplayer_modes.campaigncoop = true & game_modes != (5) & (keywords = (1634,1635) | game_modes != (1))"),
     },
     {
       slug: "best-soulslike-games",
       title: "Best Soulslike Games",
       description: "Tough, fair and unforgettable.",
       category: "genres",
-      criteria: `Games tagged "soulslike" by the IGDB community, at least 20 ratings. ${SCORE_NOTE}`,
-      build: top(25, 20, "keywords = (17326,58746)"),
+      criteria: `Games tagged "soulslike" by the IGDB community (turn-based games excluded), at least 20 ratings. ${SCORE_NOTE}`,
+      build: top(25, 20, "keywords = (17326,58746) & genres != (16)"),
     },
 
     // Special collections
@@ -371,8 +402,11 @@ async function buildDefs(): Promise<ListDef[]> {
       title: "Best Games to Play With Friends",
       description: "Couch co-op, split screen and party games for game night.",
       category: "special",
-      criteria: `Games with the IGDB "Party" theme, split-screen mode, or tagged "couch co-op" / "local multiplayer", at least 30 ratings. ${SCORE_NOTE}`,
-      build: top(25, 30, "(themes = (40) | game_modes = (4) | keywords = (1634,1677))"),
+      criteria: `Party, fighting, racing, sports, trivia, board and platform games with the IGDB "Party" theme, split-screen play or "couch co-op"/"local co-op" tags. At least 30 ratings.${REVIEWED} ${SCORE_NOTE}`,
+      build: top(25, 30, "(themes = (40) | keywords = (1634,1635) | multiplayer_modes.splitscreen = true) & genres = (4,10,14,26,35,8,33)", 1000, [
+        "Uncharted 3: Drake's Deception",
+        "Beat Saber",
+      ]),
     },
     {
       slug: "best-video-game-soundtracks",

@@ -9,6 +9,7 @@ export type ListCategory = "rankings" | "platforms" | "companies" | "genres" | "
 export interface Candidate {
   id: number;
   name: string;
+  slug?: string;
   first_release_date?: number;
   /** IGDB's combined critic + player rating, 0–100. */
   total_rating?: number;
