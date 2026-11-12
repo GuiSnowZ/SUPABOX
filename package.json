@@ -12,7 +12,8 @@
     "check": "npm run typecheck && npm run lint && npm run test && npm run test:db && npm run build",
     "db:seed-sql": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-catalog-seed.mts",
     "test:db": "node supabase/tests/schema.test.mjs",
-    "catalog:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sync-catalog.mts"
+    "catalog:sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sync-catalog.mts",
+    "lists:build": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/build-official-lists.mts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

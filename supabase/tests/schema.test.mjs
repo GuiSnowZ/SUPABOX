@@ -150,6 +150,18 @@ ok("…but once removed it can't be re-added", await fails(A, "select public.set
 await as(A, "delete from public.user_favorite_games where user_id = $1", [A]);
 ok("owner can clear favorites directly", (await db.query("select count(*)::int n from public.user_favorite_games where user_id = $1", [A])).rows[0].n === 0);
 
+// Official lists: readable when published, never writable by clients.
+const OL = "33333333-3333-4333-8333-333333333333", OD = "44444444-4444-4444-8444-444444444444";
+await db.query("insert into public.official_lists (id, slug, title, category, published) values ($1, 'best-rpgs', 'Best RPGs', 'genres', true), ($2, 'draft-list', 'Draft', 'special', false)", [OL, OD]);
+await db.query("insert into public.official_list_items (list_id, position, game_id, section) values ($1, 0, $2, '1990s'), ($3, 0, $2, null)", [OL, G1, OD]);
+ok("anyone can read published official lists", (await as(null, "select count(*)::int n from public.official_lists")).rows[0].n === 1);
+ok("unpublished official lists are hidden", (await as(A, "select count(*)::int n from public.official_lists where id = $1", [OD])).rows[0].n === 0);
+ok("items of unpublished lists are hidden", (await as(null, "select count(*)::int n from public.official_list_items where list_id = $1", [OD])).rows[0].n === 0);
+ok("items of published lists are readable", (await as(null, "select count(*)::int n from public.official_list_items where list_id = $1", [OL])).rows[0].n === 1);
+ok("users cannot create official lists", await fails(A, "insert into public.official_lists (slug, title, category, published) values ('mine', 'Mine', 'special', true)"));
+ok("users cannot edit official list items", (await as(A, "update public.official_list_items set note = 'x' where list_id = $1 returning 1", [OL])).rows.length === 0);
+ok("official list categories are restricted", await (async () => { try { await db.query("insert into public.official_lists (slug, title, category) values ('x', 'x', 'nope')"); return false; } catch { return true; } })());
+
 // Avatars (storage)
 const bucket = (await db.query("select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'")).rows[0];
 ok("avatars bucket is public, small and webp-only", bucket?.public === true && Number(bucket.file_size_limit) === 524288 && bucket.allowed_mime_types.join() === "image/webp");

@@ -68,7 +68,7 @@ export function WishlistButton({
         )}
       >
         <Icon className={cn("h-4 w-4", wishlisted && "fill-current")} />
-        {otherStatus ? `In library · ${STATUS_LABEL[otherStatus]}` : wishlisted ? "On your wishlist" : "Add to wishlist"}
+        {otherStatus ? `In library · ${STATUS_LABEL[otherStatus]}` : wishlisted ? "In Want to Play" : "Want to Play"}
       </button>
     );
   }

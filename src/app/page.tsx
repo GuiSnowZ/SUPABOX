@@ -1,7 +1,7 @@
 import { HomeView } from "@/components/home/home-view";
-import { getRecentlyReleased } from "@/lib/catalog/server";
+import { getRecentlyReleased, getTodaysReleases } from "@/lib/catalog/server";
 
 export default async function HomePage() {
-  const recent = await getRecentlyReleased(12);
-  return <HomeView recent={recent} />;
+  const [recent, today] = await Promise.all([getRecentlyReleased(12), getTodaysReleases(12)]);
+  return <HomeView recent={recent} today={today} />;
 }

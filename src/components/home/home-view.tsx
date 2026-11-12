@@ -4,6 +4,7 @@ import { BookMarked, CheckCircle2, Gamepad2, ListChecks, NotebookPen, PenLine, P
 import Link from "next/link";
 import { GameCard, GameGrid } from "@/components/games/game-card";
 import { QuickAddButton } from "@/components/games/quick-add";
+import { TodaysReleases } from "@/components/games/todays-releases";
 import { GameCover } from "@/components/games/game-cover";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { Avatar } from "@/components/ui/avatar";
@@ -130,7 +131,7 @@ function Hero({ covers }: { covers: Game[] }) {
   );
 }
 
-export function HomeView({ recent }: { recent: Game[] }) {
+export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[] }) {
   const state = useAppState();
   const signedIn = Boolean(state.currentUserId);
   const me = state.currentUserId ? getProfileById(state, state.currentUserId) : null;
@@ -163,6 +164,8 @@ export function HomeView({ recent }: { recent: Game[] }) {
             ))}
           </GameGrid>
         </section>
+
+        <TodaysReleases games={today} />
 
         <div className="grid gap-14 lg:grid-cols-[1.2fr_1fr]">
           <section aria-labelledby="activity-heading">

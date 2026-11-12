@@ -1,5 +1,6 @@
 # Daily refresh of the Supabox game catalog from IGDB.
-# Imports new releases and updates popularity (which ranks "Recently Released").
+# Imports new releases, updates popularity (which ranks "Recently Released")
+# and rebuilds the official Supabox lists.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY, IGDB_CLIENT_ID, IGDB_CLIENT_SECRET
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -33,6 +34,14 @@ jobs:
 
       - name: Sync games from IGDB
         run: npm run catalog:sync
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+
+      - name: Rebuild official Supabox lists
+        run: npm run lists:build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

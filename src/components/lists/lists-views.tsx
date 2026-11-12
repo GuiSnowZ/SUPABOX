@@ -3,7 +3,6 @@
 import { Globe, ListPlus, Lock, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GameCard, GameGrid } from "@/components/games/game-card";
 import { LoadError, PageSkeleton, RequireUser } from "@/components/layout/require-user";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
@@ -16,8 +15,49 @@ import { toast } from "@/features/app/ui-store";
 import { formatDate, pluralize } from "@/lib/utils";
 import { ListCard, ListGrid } from "./list-card";
 import { ListEditor } from "./list-editor";
+import { ListGameGrid } from "./list-game-grid";
+import { GameRoulette } from "./game-roulette";
+import { OfficialListCard } from "./official-list-card";
+import { LogoMark } from "@/components/layout/logo";
+import { CATEGORY_TITLES } from "@/lib/official-lists/categories";
+import type { OfficialListSummary } from "@/lib/official-lists/server";
+import type { ListCategory } from "@/lib/official-lists/ranking";
+import type { Game } from "@/types";
 
-export function ListsDiscover() {
+const CATEGORY_ORDER: ListCategory[] = ["rankings", "platforms", "companies", "genres", "special"];
+
+/** Official lists grouped by category, with the community lists below. */
+function OfficialLists({ lists }: { lists: OfficialListSummary[] }) {
+  if (!lists.length) return null;
+  return (
+    <section aria-labelledby="official-heading" className="space-y-10">
+      <div>
+        <h2 id="official-heading" className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+          <LogoMark className="h-6 w-6" /> Official Supabox Lists
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Built by Supabox from critic and player ratings on IGDB — every list explains how it was made.
+        </p>
+      </div>
+      {CATEGORY_ORDER.map((cat) => {
+        const group = lists.filter((l) => l.category === cat);
+        if (!group.length) return null;
+        return (
+          <div key={cat}>
+            <SectionHeader title={CATEGORY_TITLES[cat]} count={group.length} />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {group.map((l) => (
+                <OfficialListCard key={l.slug} list={l} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+export function ListsDiscover({ official = [], classics = [] }: { official?: OfficialListSummary[]; classics?: Game[] }) {
   const state = useAppState();
   const booting = state.loads.bootstrap !== "ready";
   const publicLists = getPublicLists(state);
@@ -29,7 +69,7 @@ export function ListsDiscover() {
     <Container>
       <PageHeader
         title="Lists"
-        description="Curated collections from the community — ranked favorites, themed picks and hidden gems."
+        description="Official Supabox rankings, plus collections from the community."
         actions={
           <ButtonLink href="/lists/new">
             <ListPlus className="h-4 w-4" /> New list
@@ -37,6 +77,9 @@ export function ListsDiscover() {
         }
       />
       <div className="space-y-14">
+        <GameRoulette classics={classics} />
+        <OfficialLists lists={official} />
+        <h2 className="-mb-6 text-xl font-semibold tracking-tight">Community Lists</h2>
         {featured.length ? (
           <section aria-labelledby="featured-heading">
             <SectionHeader id="featured-heading" title="Featured Lists" />
@@ -183,16 +226,7 @@ export function ListDetail({ id }: { id: string }) {
         ) : null}
       </header>
       {games.length ? (
-        <GameGrid>
-          {games.map((g, i) => (
-            <div key={g.id} className="relative">
-              <span className="absolute top-2 left-2 z-10 rounded-md bg-black/65 px-1.5 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur">
-                {i + 1}
-              </span>
-              <GameCard game={g} />
-            </div>
-          ))}
-        </GameGrid>
+        <ListGameGrid title={list.title} entries={games.map((game) => ({ game }))} />
       ) : (
         <EmptyState title="This list is empty" description={isOwner ? "Edit the list to add games." : undefined} />
       )}

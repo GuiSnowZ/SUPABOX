@@ -50,6 +50,13 @@ const sets: Array<{ name: string; where: string; sort: string; maxPages: number 
     maxPages: 4,
   },
   {
+    // Everything with a cover releasing around today, even without hype, for "Out today".
+    name: "Releasing this week",
+    where: `${base} & first_release_date >= ${now - 2 * DAY} & first_release_date <= ${now + 8 * DAY}`,
+    sort: "hypes desc",
+    maxPages: 2,
+  },
+  {
     name: "Popular (20+ ratings)",
     where: `${base} & total_rating_count > 20`,
     sort: "total_rating_count desc",

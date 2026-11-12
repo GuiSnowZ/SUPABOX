@@ -2,6 +2,7 @@
 
 import { AlertTriangle, SearchX, Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { TodaysReleases } from "./todays-releases";
 import { GameCard, GameGrid, GameGridSkeleton } from "@/components/games/game-card";
 import { RegisterGames } from "@/components/games/register-games";
 import { Input } from "@/components/ui/form";
@@ -11,11 +12,11 @@ import { pluralize } from "@/lib/utils";
 import type { Game } from "@/types";
 
 /**
- * Games discovery: search + Recently Released + Coming Soon.
+ * Games discovery: search + Recently Released + Out Today + Coming Soon.
  * Sections are server-rendered and passed in; search goes to /api/games/search
  * (our catalog first, then IGDB).
  */
-export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: Game[] }) {
+export function GamesBrowser({ recent, upcoming, today = [] }: { recent: Game[]; upcoming: Game[]; today?: Game[] }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,7 +34,7 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
 
   return (
     <>
-      <RegisterGames games={[...recent, ...upcoming]} />
+      <RegisterGames games={[...recent, ...today, ...upcoming]} />
       <div id="search" className="relative mb-10 max-w-xl scroll-mt-24">
         <label htmlFor="games-search" className="sr-only">
           Search games
@@ -108,6 +109,7 @@ export function GamesBrowser({ recent, upcoming }: { recent: Game[]; upcoming: G
               />
             )}
           </section>
+          <TodaysReleases games={today} />
           {upcoming.length ? (
             <section aria-labelledby="upcoming-heading">
               <SectionHeader id="upcoming-heading" title="Coming Soon" href="/games/coming-soon" linkLabel="See all" />

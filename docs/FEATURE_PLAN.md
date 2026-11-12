@@ -53,9 +53,9 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 3 — Descoberta e listas
 
-- [ ] **3. "Lançamentos de hoje"** na Home, acima de "Em breve": capa, título e ícones das plataformas.
+- [x] **3. "Lançamentos de hoje"** na Home, acima de "Em breve": capa, título e ícones das plataformas.
   - Usa o fuso de Brasília para decidir o que é "hoje".
-- [ ] **11. Listas oficiais do Supabox**, com selo "Oficial", separadas das listas da comunidade.
+- [x] **11. Listas oficiais do Supabox**, com selo "Oficial", separadas das listas da comunidade.
   - **Montadas com dados reais do IGDB** (gênero, plataforma, empresa, tema, nota da crítica, número de avaliações e tempo de jogo):
     - 100 Maiores de Todos os Tempos
     - Melhores por década, por geração de console e de cada ano
@@ -74,15 +74,15 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
     - Melhores histórias
     - Soulslike
   - Para essas, eu monto uma primeira versão a partir de critérios públicos (prêmios, listas de crítica), você revisa, e só então publico. Não invento rankings.
-- [ ] **12. Navegar pelos jogos de uma lista em carrossel**
+- [x] **12. Navegar pelos jogos de uma lista em carrossel**
   - Clicou num jogo da lista → abre o modo carrossel, deslizando entre os jogos dela.
   - Ações em cada jogo: "Quero jogar" ou "Já joguei". "Já joguei" mostra estrelas e review e tem botão "Adicionar".
   - Vale para listas oficiais e da comunidade.
-- [ ] **10. Roleta de jogos** dentro de Listas, com ícone próprio de roleta.
+- [x] **10. Roleta de jogos** dentro de Listas, com ícone próprio de roleta.
   - Opção A: sorteia da lista "Quero jogar" do perfil que você está vendo.
   - Opção B: sorteia dos clássicos.
   - Animação de giro e link para o jogo sorteado.
-- [ ] **1. Boas-vindas + carrossel de clássicos** logo após ativar a conta.
+- [x] **1. Boas-vindas + carrossel de clássicos** logo após ativar a conta.
   - Mostra a mensagem "Welcome to Supabox!" e depois o carrossel (o mesmo do item 12).
   - Os clássicos vêm da lista oficial dos maiores de todos os tempos.
   - Aparece uma vez só e pode ser pulado.

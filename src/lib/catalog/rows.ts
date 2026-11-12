@@ -52,6 +52,15 @@ export function todayIso(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
+/** Supabox's main audience is in Brazil: "today" for daily sections follows São Paulo time. */
+export const SITE_TIME_ZONE = "America/Sao_Paulo";
+
+/** Today's date (YYYY-MM-DD) in a given time zone. */
+export function todayIn(timeZone: string, now = new Date()): string {
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
 export function isReleasedOn(game: Pick<Game, "releaseDate">, today: string): boolean {
   return game.releaseDate !== null && game.releaseDate <= today;
 }

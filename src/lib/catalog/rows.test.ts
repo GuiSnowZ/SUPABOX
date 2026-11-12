@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { releaseBuzz, sortByReleaseBuzz } from "./rows";
+import { releaseBuzz, sortByReleaseBuzz, todayIn } from "./rows";
 
 const today = "2026-11-12";
 
@@ -32,5 +32,14 @@ describe("sortByReleaseBuzz", () => {
     const a = { title: "A", releaseDate: "2026-11-01", popularity: 0 };
     const b = { title: "B", releaseDate: "2026-11-10", popularity: 0 };
     expect(sortByReleaseBuzz([a, b], today).map((g) => g.title)).toEqual(["B", "A"]);
+  });
+});
+
+describe("todayIn", () => {
+  it("uses the given time zone, not UTC", () => {
+    // 01:30 UTC on Nov 13 is still Nov 12 in São Paulo (UTC−3).
+    const t = new Date("2026-11-13T01:30:00Z");
+    expect(todayIn("UTC", t)).toBe("2026-11-13");
+    expect(todayIn("America/Sao_Paulo", t)).toBe("2026-11-12");
   });
 });

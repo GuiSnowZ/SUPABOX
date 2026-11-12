@@ -65,7 +65,7 @@ export async function signUp(input: SignUpInput): Promise<AuthResult & { needsCo
     password: input.password,
     options: {
       data: { username, display_name: input.displayName.trim() || username },
-      emailRedirectTo: callbackUrl("/profile"),
+      emailRedirectTo: callbackUrl("/welcome"),
     },
   });
   if (error) return { ok: false, error: friendly(error.message) };

@@ -5,7 +5,7 @@ import { fetchGameRows, type GameRow, igdbSearchTerm, PLAYABLE_GAME_TYPES } from
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { getPublicSupabase } from "@/lib/supabase/public";
 import type { Game } from "@/types";
-import { GAME_COLUMNS, type GameDbRow, sortByReleaseBuzz, todayIso, toGame } from "./rows";
+import { GAME_COLUMNS, type GameDbRow, SITE_TIME_ZONE, sortByReleaseBuzz, todayIn, todayIso, toGame } from "./rows";
 
 /**
  * Server-side game catalog. Reads come from our `games` table (public data);
@@ -67,6 +67,23 @@ export async function getRecentlyReleased(limit = 18): Promise<Game[]> {
     if (games.length >= limit) break;
   }
   return games.slice(0, limit);
+}
+
+/** Games released today (São Paulo time), biggest first. */
+export async function getTodaysReleases(limit = 12): Promise<Game[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("games");
+  const { data, error } = await db()
+    .from("games")
+    .select(GAME_COLUMNS)
+    .eq("release_date", todayIn(SITE_TIME_ZONE))
+    .not("cover_url", "is", null)
+    .order("popularity", { ascending: false })
+    .order("title", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data as GameDbRow[]).map(toGame);
 }
 
 /** The most anticipated games of the next six months, shown soonest first. */

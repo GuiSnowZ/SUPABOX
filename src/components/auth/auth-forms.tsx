@@ -157,8 +157,7 @@ export function SignUpForm() {
     if (!ok) return;
     if (needsConfirmation) setSentTo(form.email);
     else {
-      toast("Welcome to Supabox!");
-      router.push("/profile");
+      router.push("/welcome");
     }
   }
 
