@@ -164,7 +164,7 @@ ok("official list categories are restricted", await (async () => { try { await d
 
 // Avatars (storage)
 const bucket = (await db.query("select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'")).rows[0];
-ok("avatars bucket is public, small and webp-only", bucket?.public === true && Number(bucket.file_size_limit) === 524288 && bucket.allowed_mime_types.join() === "image/webp");
+ok("avatars bucket is public, small and webp/jpeg only", bucket?.public === true && Number(bucket.file_size_limit) === 524288 && bucket.allowed_mime_types.join() === "image/webp,image/jpeg");
 await as(A, "insert into storage.objects (bucket_id, name, owner) values ('avatars', $1, $2)", [`${A}/pic-1.webp`, A]);
 ok("user can upload to own avatar folder", (await db.query("select count(*)::int n from storage.objects where name = $1", [`${A}/pic-1.webp`])).rows[0].n === 1);
 ok("user cannot upload into another user's folder", await fails(A, "insert into storage.objects (bucket_id, name, owner) values ('avatars', $1, $2)", [`${B}/x.webp`, A]));
@@ -173,7 +173,9 @@ ok("user cannot delete another user's avatar", (await as(B, "delete from storage
 await as(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/pic-1.webp`]);
 ok("profile can point at own avatar", (await db.query("select avatar_path from public.profiles where id = $1", [A])).rows[0].avatar_path === `${A}/pic-1.webp`);
 ok("profile cannot point at someone else's file", await fails(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${B}/x.webp`]));
-ok("profile avatar path must be a webp in the own folder", await fails(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/../evil.png`]));
+await as(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/pic-2.jpg`]);
+ok("profile can point at a JPEG avatar (Safari)", (await db.query("select avatar_path from public.profiles where id = $1", [A])).rows[0].avatar_path === `${A}/pic-2.jpg`);
+ok("profile avatar path must be a webp/jpg in the own folder", await fails(A, "update public.profiles set avatar_path = $2 where id = $1", [A, `${A}/../evil.png`]));
 
 // Follows
 await as(A, "insert into public.follows (follower_id, following_id) values ($1, $2)", [A, B]);
