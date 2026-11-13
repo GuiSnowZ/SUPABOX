@@ -1,6 +1,7 @@
 "use client";
 
 import { MailCheck } from "lucide-react";
+import { verificationAction } from "@/features/app/email-verification";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useState } from "react";
@@ -161,6 +162,8 @@ export function SignUpForm() {
     if (!ok) return;
     if (needsConfirmation) setSentTo(form.email);
     else {
+      // Signed in right away: send (or queue) the confirmation email in the background of the next page.
+      await verificationAction("start").catch(() => undefined);
       router.push("/welcome");
     }
   }

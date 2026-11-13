@@ -13,6 +13,7 @@ import { getProfileById } from "@/features/app/selectors";
 import { adjustCommentCount, registerProfiles, useAppState } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { getSupabase } from "@/lib/supabase/client";
+import { useEmailVerification } from "@/features/app/email-verification";
 import { timeAgo } from "@/lib/utils";
 import type { ID } from "@/types";
 import { useLocale, useT } from "@/i18n/client";
@@ -34,6 +35,8 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const inputId = useId();
+  const verification = useEmailVerification();
+  const needsEmail = Boolean(me) && (verification.status === "sent" || verification.status === "queued");
 
   useEffect(() => {
     let alive = true;
@@ -52,6 +55,7 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!me) return promptSignIn(t.social.signInComment);
+    if (needsEmail) return setError(t.verify.commentNeedsEmail);
     const text = body.trim();
     if (!text) return;
     setPending(true);
@@ -130,7 +134,8 @@ export function Comments({ kind, targetId, ownerId }: { kind: "review" | "list";
         </ul>
       )}
 
-      <form onSubmit={submit} className="mt-6 space-y-2">
+      {needsEmail ? <p className="mt-6 text-sm text-muted">{t.verify.commentNeedsEmail}</p> : null}
+      <form onSubmit={submit} className="mt-6 space-y-2" hidden={needsEmail}>
         <label htmlFor={inputId} className="sr-only">
           {t.social.writeComment}
         </label>

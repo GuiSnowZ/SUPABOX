@@ -266,6 +266,25 @@ for (let i = 0; i < 12; i++) {
 const recentB = (await db.query("select count(*)::int n from public.comments where user_id = $1 and created_at > now() - interval '1 minute'", [B])).rows[0].n;
 ok("comments are limited to 10 a minute", recentB === 10 && posted < 12);
 
+// Email confirmation queue
+{
+  const D = "44444444-4444-4444-8444-444444444444";
+  await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'd@x.test', '{"username":"dora_d"}')`, [D]);
+  ok("accounts without a verification row count as confirmed", (await as(B, "select public.is_email_verified($1) v", [B])).rows[0].v === true);
+  await db.query("insert into public.email_verifications (user_id, email, status) values ($1, 'd@x.test', 'queued')", [D]);
+  ok("pending accounts are not confirmed", (await as(D, "select public.is_email_verified($1) v", [D])).rows[0].v === false);
+  ok("unconfirmed accounts can't comment", await fails(D, "insert into public.comments (user_id, review_id, body) values ($1, $2, 'hi')", [D, revA]));
+  ok("people can read their own verification status", (await as(D, "select status from public.email_verifications")).rows.length === 1);
+  ok("…but not anyone else's", (await as(B, "select status from public.email_verifications")).rows.length === 0);
+  ok("clients can't mark themselves verified", await fails(D, "update public.email_verifications set status = 'verified' where user_id = $1 returning 1", [D]) || (await db.query("select status from public.email_verifications where user_id = $1", [D])).rows[0].status === "queued");
+  await db.query("update public.email_verifications set status = 'verified' where user_id = $1", [D]);
+  ok("confirmed accounts can comment", !(await fails(D, "insert into public.comments (user_id, review_id, body) values ($1, $2, 'hi')", [D, revA])));
+  ok("clients can't claim email slots", await fails(D, "select public.claim_email_slot(80)"));
+  const slots = [];
+  for (let i = 0; i < 4; i++) slots.push((await db.query("select public.claim_email_slot(3) ok")).rows[0].ok);
+  ok("the daily email budget stops at the limit", JSON.stringify(slots) === "[true,true,true,false]");
+}
+
 // Account deletion cascades
 await db.query("delete from auth.users where id = $1", [A]);
 const left = (await db.query("select (select count(*) from public.reviews)::int r, (select count(*) from public.lists)::int l, (select count(*) from public.follows)::int f")).rows[0];

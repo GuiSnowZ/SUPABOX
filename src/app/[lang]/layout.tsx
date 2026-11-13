@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { VerifyEmailBanner } from "@/components/auth/verify-email-banner";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { notFound } from "next/navigation";
@@ -71,6 +72,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
           </a>
           <StoreStarter />
           <SiteHeader />
+          <VerifyEmailBanner />
           <main id="main" className="flex-1">
             {children}
           </main>
