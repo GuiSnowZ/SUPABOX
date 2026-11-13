@@ -25,7 +25,7 @@ export function profileSearchTerm(query: string): string {
 
 export type ProfileSearchState = { status: "idle" | "loading" | "done" | "error"; profiles: Profile[] };
 
-/** Debounced search of public profiles by display name or @username. */
+/** Debounced search of public profiles by display name or @username, most followed and active first. */
 export function useProfileSearch(query: string, delay = 250): ProfileSearchState {
   const [state, setState] = useState<ProfileSearchState>({ status: "idle", profiles: [] });
   const term = profileSearchTerm(query);
@@ -35,13 +35,19 @@ export function useProfileSearch(query: string, delay = 250): ProfileSearchState
     let alive = true;
     const timer = setTimeout(async () => {
       setState((s) => ({ status: "loading", profiles: s.profiles }));
-      const pattern = `*${term}*`;
-      const { data, error } = await getSupabase()
-        .from("profiles")
-        .select("id, username, display_name, bio, avatar_hue, avatar_path, created_at")
-        .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
-        .order("username")
-        .limit(MAX_PROFILE_RESULTS);
+      const db = getSupabase();
+      // Ranked search (most followed / active first, see migration search_profiles)…
+      let { data, error } = await db.rpc("search_profiles", { p_query: query.trim(), p_limit: MAX_PROFILE_RESULTS });
+      // …or a plain name match if that database function isn't installed yet.
+      if (error?.code === "PGRST202" || error?.code === "42883") {
+        const pattern = `*${term}*`;
+        ({ data, error } = await db
+          .from("profiles")
+          .select("id, username, display_name, bio, avatar_hue, avatar_path, created_at")
+          .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
+          .order("username")
+          .limit(MAX_PROFILE_RESULTS));
+      }
       if (!alive) return;
       if (error) return setState({ status: "error", profiles: [] });
       const profiles = (data ?? []).map(toProfile);
@@ -52,6 +58,8 @@ export function useProfileSearch(query: string, delay = 250): ProfileSearchState
       alive = false;
       clearTimeout(timer);
     };
+    // The raw query is sent to the database function, which escapes it itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, delay]);
 
   return term.replace(/\\/g, "").length < 2 ? { status: "idle", profiles: [] } : state;

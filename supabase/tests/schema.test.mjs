@@ -244,6 +244,20 @@ ok("diary stores hours and platform", (await db.query("select hours::float h, pl
 ok("negative hours rejected", await fails(B, "insert into public.play_sessions (user_id, game_id, started_on, hours) values ($1, $2, '2026-01-01', -1)", [B, G1]));
 ok("finish date after start", await fails(A, "insert into public.play_sessions (user_id, game_id, started_on, finished_on) values ($1, $2, '2026-01-02', '2026-01-01')", [A, G1]));
 
+// People search ranking
+{
+  const C = "33333333-3333-4333-8333-333333333333";
+  await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'c@x.test', '{"username":"alice_fan","display_name":"Alice Fan"}')`, [C]);
+  await as(B, "insert into public.follows (follower_id, following_id) values ($1, $2) on conflict do nothing", [B, A]);
+  const res = (await as(null, "select username, followers, reviews, rated from public.search_profiles('alice')")).rows;
+  ok("people search finds by username/display name", res.length === 2);
+  ok("people with followers and reviews rank first", res[0].username === "alice_1" && Number(res[0].followers) >= 1);
+  const exact = (await as(null, "select username from public.search_profiles('@alice_fan')")).rows;
+  ok("an exact @username match comes first", exact[0]?.username === "alice_fan");
+  ok("LIKE wildcards are matched literally", (await as(null, "select count(*)::int n from public.search_profiles('%%')")).rows[0].n === 0);
+  ok("too-short queries return nothing", (await as(null, "select count(*)::int n from public.search_profiles('a')")).rows[0].n === 0);
+}
+
 // Comment flood protection
 let posted = 0;
 for (let i = 0; i < 12; i++) {
