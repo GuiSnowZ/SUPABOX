@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { alternatesFor } from "@/lib/seo/meta";
 import { GamesBrowser } from "@/components/games/games-browser";
 import { Container, PageHeader } from "@/components/ui/primitives";
 import { getT } from "@/i18n/server";
 import { getRecentlyReleased, getTodaysReleases, getUpcoming } from "@/lib/catalog/server";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/games">): Promise<Metadata> {
-  const { t } = await getT(params);
-  return { title: t.games.title, description: t.games.metaDescription };
+  const { t, locale } = await getT(params);
+  return { alternates: alternatesFor("/games", locale), title: t.games.title, description: t.games.metaDescription };
 }
 
 export default async function GamesPage({ params }: PageProps<"/[lang]/games">) {

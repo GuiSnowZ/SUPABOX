@@ -4,17 +4,29 @@ import { Suspense } from "react";
 import { ListDetail } from "@/components/lists/lists-views";
 import { Container, Skeleton } from "@/components/ui/primitives";
 import { getPublicSupabase } from "@/lib/supabase/public";
+import { shareMetadata } from "@/lib/seo/meta";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/lists/[id]">): Promise<Metadata> {
   const { id } = await params;
   const db = getPublicSupabase();
-  const { t } = await getT(params);
+  const { t, locale } = await getT(params);
   if (!db || !UUID.test(id)) return { title: t.lists.title };
   // Anonymous query: private lists are never visible here, so their titles don't leak.
   const { data } = await db.from("lists").select("title, description").eq("id", id).maybeSingle();
-  return data ? { title: data.title, description: data.description || undefined } : { title: t.lists.title };
+  if (!data) return { title: t.lists.title };
+  return {
+    title: data.title,
+    description: data.description || undefined,
+    ...shareMetadata({
+      path: `/lists/${id}`,
+      locale,
+      title: `${data.title} · Supabox`,
+      description: data.description,
+      image: `/og/community-list/${id}`,
+    }),
+  };
 }
 
 export default function ListPage({ params }: PageProps<"/[lang]/lists/[id]">) {

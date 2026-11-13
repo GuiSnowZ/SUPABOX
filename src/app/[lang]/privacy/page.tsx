@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { alternatesFor } from "@/lib/seo/meta";
 import Link from "next/link";
 import { getT } from "@/i18n/server";
 import { LEGAL_CONTACT, LEGAL_OPERATOR, LegalPage } from "@/components/legal/legal-page";
@@ -6,8 +7,8 @@ import { LEGAL_CONTACT, LEGAL_OPERATOR, LegalPage } from "@/components/legal/leg
 export async function generateMetadata({ params }: PageProps<"/[lang]/privacy">): Promise<Metadata> {
   const { locale } = await getT(params);
   return locale === "pt-BR"
-    ? { title: "Política de Privacidade", description: "O que o Supabox coleta, por quê, quem trata os dados e quais são seus direitos." }
-    : { title: "Privacy Policy", description: "What Supabox collects, why, who processes it, and your rights." };
+    ? { alternates: alternatesFor("/privacy", locale), title: "Política de Privacidade", description: "O que o Supabox coleta, por quê, quem trata os dados e quais são seus direitos." }
+    : { alternates: alternatesFor("/privacy", locale), title: "Privacy Policy", description: "What Supabox collects, why, who processes it, and your rights." };
 }
 
 export default async function PrivacyPage({ params }: PageProps<"/[lang]/privacy">) {

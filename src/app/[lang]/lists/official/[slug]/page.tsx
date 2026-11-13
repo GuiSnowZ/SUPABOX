@@ -9,6 +9,8 @@ import { Container } from "@/components/ui/primitives";
 import { officialListText } from "@/i18n/official-lists";
 import { getT } from "@/i18n/server";
 import { getOfficialList } from "@/lib/official-lists/server";
+import { shareMetadata } from "@/lib/seo/meta";
+import { JsonLd, listJsonLd } from "@/lib/seo/json-ld";
 import { formatDate } from "@/lib/utils";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/lists/official/[slug]">): Promise<Metadata> {
@@ -19,11 +21,13 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/lists/offi
   return {
     title: text.title,
     description: text.description,
-    openGraph: {
+    ...shareMetadata({
+      path: `/lists/official/${list.slug}`,
+      locale,
       title: `${text.title} · Supabox`,
       description: text.description,
-      images: list.entries[0]?.game.coverUrl ? [{ url: list.entries[0].game.coverUrl }] : undefined,
-    },
+      image: `/og/list/${list.slug}`,
+    }),
   };
 }
 
@@ -37,6 +41,15 @@ export default async function OfficialListPage({ params }: PageProps<"/[lang]/li
   return (
     <Container>
       <RegisterGames games={list.entries.map((e) => e.game)} />
+      <JsonLd
+        data={listJsonLd({
+          name: text.title,
+          description: text.description,
+          path: `/lists/official/${list.slug}`,
+          locale,
+          games: list.entries.map((e) => e.game),
+        })}
+      />
       <nav aria-label="Breadcrumb" className="pt-6 text-sm text-muted">
         <Link href="/lists" className="inline-flex items-center gap-1 hover:text-fg">
           <ChevronLeft className="h-4 w-4" /> {t.lists.title}

@@ -1,13 +1,14 @@
 import { Gamepad2, PenLine } from "lucide-react";
 import type { Metadata } from "next";
+import { alternatesFor } from "@/lib/seo/meta";
 import { MedalArt } from "@/components/profiles/medals";
 import { Container, PageHeader, SectionHeader } from "@/components/ui/primitives";
 import { getT } from "@/i18n/server";
 import { MEDAL_TIERS } from "@/lib/medals";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/medals">): Promise<Metadata> {
-  const { t } = await getT(params);
-  return { title: t.medals.title, description: t.medals.metaDescription };
+  const { t, locale } = await getT(params);
+  return { alternates: alternatesFor("/medals", locale), title: t.medals.title, description: t.medals.metaDescription };
 }
 
 export default async function MedalsPage({ params }: PageProps<"/[lang]/medals">) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, CheckCircle2, Gamepad2, ListChecks, NotebookPen, PenLine, PlayCircle, Plus, Users } from "lucide-react";
+import { BarChart3, BookMarked, CalendarDays, CheckCircle2, Gamepad2, ListChecks, NotebookPen, PenLine, PlayCircle, Plus, Star, Users } from "lucide-react";
 import Link from "next/link";
 import { GameCard, GameGrid } from "@/components/games/game-card";
 import { QuickAddButton } from "@/components/games/quick-add";
@@ -13,7 +13,7 @@ import { Container, EmptyState, SectionHeader, Skeleton } from "@/components/ui/
 import { StarRating } from "@/components/ui/star-rating";
 import { getFeed, getProfileById } from "@/features/app/selectors";
 import { useAppState } from "@/features/app/store";
-import { timeAgo } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import type { ActivityType, Game } from "@/types";
 import { useLocale, useT } from "@/i18n/client";
 
@@ -92,10 +92,55 @@ const HERO_POINTS = [
   { icon: Users, key: "share" },
 ] as const;
 
-function Hero({ covers }: { covers: Game[] }) {
+const FEATURES = [
+  { icon: CalendarDays, key: "diary" },
+  { icon: Star, key: "reviews" },
+  { icon: ListChecks, key: "lists" },
+  { icon: BarChart3, key: "stats" },
+] as const;
+
+/** For visitors: what Supabox does, and a last call to sign up. */
+function Landing({ className }: { className?: string }) {
   const t = useT();
   return (
-    <section className="relative overflow-hidden border-b border-border">
+    <section aria-labelledby="landing-heading" className={cn("space-y-8", className)}>
+      <div className="max-w-2xl">
+        <h2 id="landing-heading" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          {t.home.landingTitle}
+        </h2>
+        <p className="mt-2 text-muted">{t.home.landingText}</p>
+      </div>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {FEATURES.map(({ icon: Icon, key }) => {
+          const [title, text] = t.home.features[key];
+          return (
+            <li key={key} className="rounded-[var(--radius-card)] border border-border bg-bg-subtle p-5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                <Icon className="h-5 w-5" />
+              </span>
+              <h3 className="mt-4 font-semibold">{title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{text}</p>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex flex-col items-start gap-4 rounded-[var(--radius-card)] border border-accent/30 bg-accent/[0.07] p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-lg font-semibold">{t.home.ctaTitle}</p>
+          <p className="text-sm text-muted">{t.home.ctaText}</p>
+        </div>
+        <ButtonLink href="/sign-up" size="lg">
+          {t.home.createDiary}
+        </ButtonLink>
+      </div>
+    </section>
+  );
+}
+
+function Hero({ covers, className }: { covers: Game[]; className?: string }) {
+  const t = useT();
+  return (
+    <section className={cn("relative overflow-hidden border-b border-border", className)}>
       <Container className="grid items-center gap-10 py-14 md:grid-cols-[1.1fr_1fr] md:py-20">
         <div>
           <p className="text-sm font-medium text-accent">{t.home.heroTagline}</p>
@@ -146,7 +191,9 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
 
   return (
     <>
-      {state.authReady && !signedIn ? <Hero covers={recent} /> : null}
+      {/* Rendered on the server too (for search engines and first paint); the
+          "visitor-only" class hides it for signed-in browsers until auth is known. */}
+      {!signedIn ? <Hero covers={recent} className={state.authReady ? undefined : "visitor-only"} /> : null}
       <Container className="space-y-14 pt-10">
         {me ? (
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -192,6 +239,8 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
             )}
           </section>
         </div>
+
+        {!signedIn ? <Landing className={state.authReady ? undefined : "visitor-only"} /> : null}
 
         {signedIn ? (
           <div className="flex flex-wrap gap-3 rounded-[var(--radius-card)] border border-border bg-bg-subtle p-5">

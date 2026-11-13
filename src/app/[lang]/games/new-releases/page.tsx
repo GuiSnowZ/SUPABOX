@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { alternatesFor } from "@/lib/seo/meta";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { GameGridSkeleton } from "@/components/games/game-card";
@@ -8,8 +9,8 @@ import { getT } from "@/i18n/server";
 import { getNewReleasesPage } from "@/lib/catalog/server";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/games/new-releases">): Promise<Metadata> {
-  const { t } = await getT(params);
-  return { title: t.games.newReleasesTitle, description: t.games.newReleasesMeta };
+  const { t, locale } = await getT(params);
+  return { alternates: alternatesFor("/games/new-releases", locale), title: t.games.newReleasesTitle, description: t.games.newReleasesMeta };
 }
 
 async function Results({

@@ -20,20 +20,24 @@ import { getDictionary } from "@/i18n";
 import type { Locale } from "@/i18n/config";
 import { genreName } from "@/i18n/genres";
 import { getT } from "@/i18n/server";
+import { shareMetadata } from "@/lib/seo/meta";
+import { GameJsonLd } from "@/lib/seo/json-ld";
+import { Suspense } from "react";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/games/[slug]">): Promise<Metadata> {
-  const { t } = await getT(params);
+  const { t, locale } = await getT(params);
   const game = await resolveGameBySlug((await params).slug);
   if (!game) return { title: t.games.notFoundTitle };
   return {
     title: game.title,
     description: game.summary,
-    openGraph: {
+    ...shareMetadata({
+      path: `/games/${game.slug}`,
+      locale,
       title: t.games.onSupabox(game.title),
       description: game.summary,
-      type: "website",
-      images: game.coverUrl ? [{ url: game.coverUrl }] : undefined,
-    },
+      image: `/og/game/${game.slug}`,
+    }),
   };
 }
 
@@ -47,7 +51,14 @@ export default async function GamePage({ params }: PageProps<"/[lang]/games/[slu
   const { locale } = await getT(params);
   const game = await resolveGameBySlug((await params).slug);
   if (!game) notFound();
-  return <GameDetails game={game} locale={locale} />;
+  return (
+    <>
+      <GameDetails game={game} locale={locale} />
+      <Suspense fallback={null}>
+        <GameJsonLd game={game} locale={locale} />
+      </Suspense>
+    </>
+  );
 }
 
 function GameDetails({ game, locale }: { game: Game; locale: Locale }) {

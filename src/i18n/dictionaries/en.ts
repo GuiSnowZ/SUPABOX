@@ -658,6 +658,16 @@ export const en = {
       published_review: "reviewed",
     },
     youWantToPlay: "want to play",
+    landingTitle: "Everything you play, in one place",
+    landingText: "Supabox is free. Build your gaming diary in minutes, and remember every game you play.",
+    features: {
+      diary: ["A diary of every playthrough", "Log when you started and finished, hours and platform, and see it all on a calendar."],
+      reviews: ["Rate, review and share", "Give stars, write what you thought, and share your rating to Instagram Stories."],
+      lists: ["Lists worth exploring", "Browse official lists by genre and theme, or build your own ranked lists."],
+      stats: ["Stats and medals", "See your year in games, your favorite genres and platforms, and earn medals as you complete games."],
+    },
+    ctaTitle: "Start your gaming diary",
+    ctaText: "Free, in English and Portuguese.",
   },
   welcome: {
     signIn: "Sign in to start your diary.",
@@ -722,6 +732,26 @@ export const en = {
       list_like: ["liked your list ", ""],
       list_comment: ["commented on your list ", ""],
     },
+  },
+  og: {
+    game: "Game",
+    comingSoon: "Coming soon",
+    criticScore: (n: number) => `Critic score · ${n} ${n === 1 ? "review" : "reviews"}`,
+    officialList: "Official Supabox list",
+    games: (n: number) => `${n} ${n === 1 ? "game" : "games"}`,
+    profile: "Gaming diary",
+    profileStats: (completed: number, reviews: number) =>
+      `${completed} completed · ${reviews} ${reviews === 1 ? "review" : "reviews"}`,
+    reviewBy: (name: string) => `Review by ${name}`,
+    list: "List",
+    listBy: (name: string) => `A list by ${name}`,
+    shareStory: "Share to Stories",
+    preparing: "Preparing image…",
+    storySaved: "Image saved — post it to your Stories",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
+    shareError: "Couldn't create the image. Try again.",
+    storyAlt: (game: string) => `Stories image of the review of ${game}`,
   },
   // @sections
 };

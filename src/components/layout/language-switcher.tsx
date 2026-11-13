@@ -21,7 +21,11 @@ export function LanguageSwitcher() {
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     const userId = getAppState().currentUserId;
     if (userId) await getSupabase().from("profiles").update({ locale: next }).eq("id", userId);
-    window.location.reload();
+    // /pt-BR/… always shows Portuguese, so leave that prefix when switching away.
+    const { pathname, search, hash } = window.location;
+    const plain = pathname.replace(/^\/pt-BR(?=\/|$)/, "") || "/";
+    if (plain !== pathname) window.location.assign(`${plain}${search}${hash}`);
+    else window.location.reload();
   }
 
   return (

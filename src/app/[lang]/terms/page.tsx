@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { alternatesFor } from "@/lib/seo/meta";
 import Link from "next/link";
 import { getT } from "@/i18n/server";
 import { LEGAL_CONTACT, LEGAL_OPERATOR, LegalPage } from "@/components/legal/legal-page";
@@ -6,8 +7,8 @@ import { LEGAL_CONTACT, LEGAL_OPERATOR, LegalPage } from "@/components/legal/leg
 export async function generateMetadata({ params }: PageProps<"/[lang]/terms">): Promise<Metadata> {
   const { locale } = await getT(params);
   return locale === "pt-BR"
-    ? { title: "Termos de Uso", description: "As regras para usar o Supabox." }
-    : { title: "Terms of Service", description: "The rules for using Supabox." };
+    ? { alternates: alternatesFor("/terms", locale), title: "Termos de Uso", description: "As regras para usar o Supabox." }
+    : { alternates: alternatesFor("/terms", locale), title: "Terms of Service", description: "The rules for using Supabox." };
 }
 
 export default async function TermsPage({ params }: PageProps<"/[lang]/terms">) {

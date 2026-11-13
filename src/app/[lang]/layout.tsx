@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { SignInPrompt, Toaster } from "@/components/layout/overlays";
@@ -55,8 +56,12 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   if (!isLocale(lang)) notFound();
   const t = getDictionary(lang);
   return (
-    <html lang={lang} className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang={lang} className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-bg text-fg">
+        {/* Pages are pre-rendered for visitors; hide visitor-only parts right away when a session cookie exists. */}
+        <Script id="auth-hint" strategy="beforeInteractive">
+          {`try{if(/(^|; )sb-[^=]*-auth-token/.test(document.cookie))document.documentElement.dataset.auth="1"}catch(e){}`}
+        </Script>
         <LocaleProvider locale={lang}>
           <a
             href="#main"

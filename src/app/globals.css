@@ -91,3 +91,8 @@ body {
 .animate-skeleton {
   animation: sb-pulse 1.6s ease-in-out infinite;
 }
+
+/* Visitor-only content rendered on the server: hidden at once for signed-in browsers (see layout). */
+html[data-auth] .visitor-only {
+  display: none;
+}

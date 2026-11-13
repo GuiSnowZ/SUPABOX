@@ -23,13 +23,13 @@ async function unknownGame(pathname: string): Promise<boolean> {
   return !(await gameMayExist(slug));
 }
 
-/** Paths that aren't pages (no language): API, auth callbacks, Next internals and files. */
-const NOT_A_PAGE = /^\/(api|auth|_next)(\/|$)|\.[a-z0-9]+$/i;
+/** Paths that aren't pages (no language): API, auth callbacks, share images, Next internals and files. */
+const NOT_A_PAGE = /^\/(api|auth|og|_next)(\/|$)|\.[a-z0-9]+$/i;
 
 /**
- * 1. Language: /pt-BR/… or /en/… links save that language and redirect to the
- *    plain URL; every page request is rewritten to /[lang]/… using the saved
- *    choice, else the browser's language.
+ * 1. Language: plain URLs are rewritten to /[lang]/… using the saved choice,
+ *    else the browser's language. /pt-BR/… URLs always serve Portuguese (so
+ *    search engines can index that version) and /en/… redirects to the plain URL.
  * 2. Unknown game slugs get a real 404 (game pages stream, so they can't set it).
  * 3. Refreshes the Supabase auth session cookie so it doesn't expire while the
  *    user is active. Authorization itself is enforced by Row Level Security.
@@ -39,23 +39,31 @@ export async function proxy(request: NextRequest) {
   const isPage = !NOT_A_PAGE.test(pathname);
 
   const prefix = LOCALES.find((l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`));
-  if (isPage && prefix) {
-    const url = new URL(`${pathname.slice(prefix.length + 1) || "/"}${search}`, request.url);
-    const res = NextResponse.redirect(url);
-    res.cookies.set(LOCALE_COOKIE, prefix, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  const rest = prefix ? pathname.slice(prefix.length + 1) || "/" : pathname;
+  const remember = (res: NextResponse, l: Locale) => {
+    res.cookies.set(LOCALE_COOKIE, l, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
     return res;
+  };
+
+  // English lives at the plain URLs: /en/… saves the choice and redirects there.
+  if (isPage && prefix === "en") {
+    return remember(NextResponse.redirect(new URL(`${rest}${search}`, request.url)), "en");
   }
 
+  // /pt-BR/… is served directly (a stable Portuguese URL search engines can index)
+  // and remembers the choice; plain URLs use the saved choice or the browser language.
   const saved = request.cookies.get(LOCALE_COOKIE)?.value;
-  const locale: Locale = isLocale(saved) ? saved : localeFromAcceptLanguage(request.headers.get("accept-language"));
+  const locale: Locale =
+    prefix === "pt-BR" ? "pt-BR" : isLocale(saved) ? saved : localeFromAcceptLanguage(request.headers.get("accept-language"));
 
   const makeResponse = (): NextResponse => {
     if (!isPage) return NextResponse.next({ request });
-    const url = new URL(`/${locale}${pathname === "/" ? "" : pathname}${search}`, request.url);
-    return NextResponse.rewrite(url, { request });
+    const url = new URL(`/${locale}${rest === "/" ? "" : rest}${search}`, request.url);
+    const res = NextResponse.rewrite(url, { request });
+    return prefix === "pt-BR" && saved !== "pt-BR" ? remember(res, "pt-BR") : res;
   };
 
-  if (isPage && (await unknownGame(pathname))) {
+  if (isPage && (await unknownGame(rest))) {
     return NextResponse.rewrite(new URL(`/${locale}/__not-found`, request.url), { status: 404 });
   }
   let response = makeResponse();

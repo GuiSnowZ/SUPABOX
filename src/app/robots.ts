@@ -7,7 +7,12 @@ export default function robots(): MetadataRoute.Robots {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/auth/", "/account/", "/profile/edit", "/library"] },
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/api/", "/auth/", "/account/", "/profile", "/library", "/notifications", "/welcome", "/pt-BR/profile", "/pt-BR/library"],
+    },
+    sitemap: `${SITE_URL}/sitemap.xml`,
     host: SITE_URL,
   };
 }

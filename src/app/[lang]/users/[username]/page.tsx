@@ -3,6 +3,7 @@ import { getT } from "@/i18n/server";
 import { Suspense } from "react";
 import { PublicProfile } from "@/components/profiles/profile-view";
 import { getPublicSupabase } from "@/lib/supabase/public";
+import { shareMetadata } from "@/lib/seo/meta";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/users/[username]">): Promise<Metadata> {
   const { username } = await params;
@@ -13,9 +14,21 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/users/[use
     .select("display_name, username, bio")
     .eq("username", username.toLowerCase())
     .maybeSingle();
-  return data
-    ? { title: `${data.display_name} (@${data.username})`, description: data.bio || undefined }
-    : { title: (await getT(params)).t.profile.userNotFound };
+  const { t, locale } = await getT(params);
+  if (!data) return { title: t.profile.userNotFound };
+  const title = `${data.display_name} (@${data.username})`;
+  return {
+    title,
+    description: data.bio || undefined,
+    ...shareMetadata({
+      path: `/users/${data.username}`,
+      locale,
+      title: `${title} · Supabox`,
+      description: data.bio,
+      image: `/og/user/${data.username}`,
+      type: "profile",
+    }),
+  };
 }
 
 export default function UserPage({ params }: PageProps<"/[lang]/users/[username]">) {

@@ -660,6 +660,16 @@ export const ptBR: Dictionary = {
       published_review: "avaliou",
     },
     youWantToPlay: "quer jogar",
+    landingTitle: "Tudo o que você joga, em um só lugar",
+    landingText: "O Supabox é gratuito. Monte seu diário de jogos em minutos e lembre de cada jogo que você jogou.",
+    features: {
+      diary: ["Um diário de cada jogatina", "Registre quando começou e zerou, horas e plataforma, e veja tudo em um calendário."],
+      reviews: ["Avalie, escreva e compartilhe", "Dê estrelas, conte o que achou e compartilhe sua nota nos Stories do Instagram."],
+      lists: ["Listas para explorar", "Navegue por listas oficiais por gênero e tema, ou crie suas próprias listas ranqueadas."],
+      stats: ["Estatísticas e medalhas", "Veja seu ano em jogos, seus gêneros e plataformas favoritos, e ganhe medalhas ao zerar jogos."],
+    },
+    ctaTitle: "Comece seu diário de jogos",
+    ctaText: "Grátis, em português e inglês.",
   },
   welcome: {
     signIn: "Entre para começar seu diário.",
@@ -723,6 +733,26 @@ export const ptBR: Dictionary = {
       list_like: ["curtiu sua lista ", ""],
       list_comment: ["comentou na sua lista ", ""],
     },
+  },
+  og: {
+    game: "Jogo",
+    comingSoon: "Em breve",
+    criticScore: (n: number) => `Nota da crítica · ${n} ${n === 1 ? "análise" : "análises"}`,
+    officialList: "Lista oficial do Supabox",
+    games: (n: number) => `${n} ${n === 1 ? "jogo" : "jogos"}`,
+    profile: "Diário de jogos",
+    profileStats: (completed: number, reviews: number) =>
+      `${completed} ${completed === 1 ? "zerado" : "zerados"} · ${reviews} ${reviews === 1 ? "review" : "reviews"}`,
+    reviewBy: (name: string) => `Review de ${name}`,
+    list: "Lista",
+    listBy: (name: string) => `Uma lista de ${name}`,
+    shareStory: "Compartilhar nos Stories",
+    preparing: "Gerando imagem…",
+    storySaved: "Imagem salva — publique nos seus Stories",
+    copyLink: "Copiar link",
+    linkCopied: "Link copiado",
+    shareError: "Não foi possível gerar a imagem. Tente de novo.",
+    storyAlt: (game: string) => `Imagem para Stories da review de ${game}`,
   },
   // @sections
 };
