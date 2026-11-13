@@ -21,6 +21,7 @@ import {
 } from "@/features/app/selectors";
 import { actions, getAppState, loaders, registerGames, useAppState, useLoad } from "@/features/app/store";
 import { changeLibraryStatus } from "@/features/app/library-actions";
+import { statusAfterDiaryEntry } from "@/features/app/state";
 import { openReviewPrompt, promptSignIn, toast } from "@/features/app/ui-store";
 import { LIBRARY_STATUSES } from "@/lib/library";
 import { formatRating } from "@/lib/ratings";
@@ -154,17 +155,19 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       setPending(false);
       return setError(r.error);
     }
-    if (quick) {
-      const target = completing ? "completed" : "playing";
-      const state = getAppState();
-      const before = getUserGame(state, state.currentUserId, game.id)?.status;
-      if (before !== target) {
-        const s = await actions.setLibraryStatus(game.id, target);
-        if (!s.ok) {
-          setPending(false);
-          return setError(s.error);
-        }
+    // A first playthrough moves the game to Completed (finished) or Playing;
+    // replays leave the library status as it is.
+    const finished = quick ? completing : Boolean(finishedOn);
+    const state = getAppState();
+    const target = statusAfterDiaryEntry(getUserGame(state, state.currentUserId, game.id)?.status, kind, finished);
+    if (target) {
+      const s = await actions.setLibraryStatus(game.id, target);
+      if (!s.ok) {
+        setPending(false);
+        return setError(s.error);
       }
+    }
+    if (quick) {
       setPending(false);
       onDone();
       // Finishing a game asks for a rating and review, like everywhere else.
@@ -173,6 +176,8 @@ export function DiaryForm({ game, onDone, quick = false }: { game: Game; onDone:
       return;
     } else {
       toast(t.diary.added);
+      // Finishing a first playthrough asks for a rating and review too.
+      if (target === "completed") openReviewPrompt(game.id);
     }
     setPending(false);
     onDone();

@@ -19,6 +19,7 @@ import {
   toggleLike,
   setLibraryStatus,
   signOut,
+  statusAfterDiaryEntry,
   toggleFollow,
   toggleWishlist,
   updateList,
@@ -239,5 +240,29 @@ describe("per-friend bell", () => {
     s = setFollowNotify(s, followed, false);
     expect(s.follows.find((f) => f.followerId === "u1" && f.followingId === followed)!.notify).toBe(false);
     expect(() => setFollowNotify(s, "u1", false)).toThrow(/Follow them first/);
+  });
+});
+
+describe("library status after a diary entry", () => {
+  it("first playthrough finished → Completed", () => {
+    expect(statusAfterDiaryEntry(undefined, "first_playthrough", true)).toBe("completed");
+    expect(statusAfterDiaryEntry("want_to_play", "first_playthrough", true)).toBe("completed");
+    expect(statusAfterDiaryEntry("playing", "first_playthrough", true)).toBe("completed");
+    expect(statusAfterDiaryEntry("completed", "first_playthrough", true)).toBeNull();
+  });
+  it("first playthrough in progress → Playing, but never downgrades Completed", () => {
+    expect(statusAfterDiaryEntry("want_to_play", "first_playthrough", false)).toBe("playing");
+    expect(statusAfterDiaryEntry("completed", "first_playthrough", false)).toBeNull();
+  });
+  it("replays and returns keep the current status", () => {
+    for (const kind of ["replay", "returned"] as const) {
+      expect(statusAfterDiaryEntry("completed", kind, true)).toBeNull();
+      expect(statusAfterDiaryEntry("dropped", kind, true)).toBeNull();
+      expect(statusAfterDiaryEntry("playing", kind, false)).toBeNull();
+    }
+  });
+  it("a replay of a game not in the library still adds it", () => {
+    expect(statusAfterDiaryEntry(undefined, "replay", true)).toBe("completed");
+    expect(statusAfterDiaryEntry(null, "returned", false)).toBe("playing");
   });
 });

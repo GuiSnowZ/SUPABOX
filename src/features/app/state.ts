@@ -285,6 +285,24 @@ export function logPlaySession(
   return { ...state, playSessions: [entry, ...state.playSessions] };
 }
 
+/**
+ * Library status after logging a diary entry, or null to leave it alone.
+ * - First playthrough: finished → Completed; in progress → Playing (a game
+ *   already Completed is never moved back to Playing).
+ * - Replays and returns don't touch the status — unless the game isn't in the
+ *   library yet, so the entry doesn't point at a game you don't have.
+ */
+export function statusAfterDiaryEntry(
+  before: UserGame["status"] | null | undefined,
+  kind: PlaySessionKind,
+  finished: boolean,
+): UserGame["status"] | null {
+  if (kind !== "first_playthrough" && before) return null;
+  const target: UserGame["status"] = finished ? "completed" : "playing";
+  if (target === "playing" && before === "completed") return null;
+  return before === target ? null : target;
+}
+
 export function deletePlaySession(state: AppState, sessionId: ID): AppState {
   const userId = requireUser(state);
   const entry = state.playSessions.find((p) => p.id === sessionId);
