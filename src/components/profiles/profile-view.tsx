@@ -51,43 +51,33 @@ import { useLocale, useT } from "@/i18n/client";
 import { Medals } from "./medals";
 import { RatedGames } from "./rated-games";
 
-function Stat({
-  value,
-  label,
-  href,
-}: {
-  value: number;
-  label: string;
-  href?: string;
-}) {
-  const inner = (
-    <>
-      <span className="block text-lg font-semibold tabular-nums text-fg">
-        {value}
-      </span>
-      <span className="text-xs text-muted">{label}</span>
-    </>
-  );
-  return href ? (
+/**
+ * One profile number. The whole block (number + label) is a link to the full
+ * list behind it, with a hover/focus state and a large touch target.
+ */
+function Stat({ value, label, href }: { value: number; label: string; href: string }) {
+  const t = useT();
+  return (
     <Link
       href={href}
-      className="rounded-md hover:[&>span:first-child]:text-accent"
+      aria-label={t.profilePages.statLink(value, label)}
+      className="group -mx-2 flex min-h-11 flex-col justify-center rounded-lg px-2 py-1 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent active:bg-surface"
     >
-      {inner}
+      <span className="block text-lg font-semibold tabular-nums text-fg transition-colors group-hover:text-accent">{value}</span>
+      <span className="text-xs text-muted transition-colors group-hover:text-fg">{label}</span>
     </Link>
-  ) : (
-    <div>{inner}</div>
   );
 }
 
-function FollowButton({ profile }: { profile: Profile }) {
+export function FollowButton({ profile, size }: { profile: Profile; size?: "sm" }) {
   const t = useT();
   const state = useAppState();
   const following = isFollowing(state, state.currentUserId, profile.id);
   return (
     <Button
       variant={following ? "secondary" : "primary"}
-      className="group/follow"
+      size={size}
+      className="group/follow shrink-0"
       aria-pressed={following}
       onClick={async () => {
         if (!state.authReady) return;
@@ -231,15 +221,16 @@ function ProfileContent({ profile }: { profile: Profile }) {
                 {profile.bio}
               </p>
             ) : null}
-            <div className="mt-5 grid grid-cols-5 gap-2 sm:flex sm:gap-x-8">
-              <Stat value={completed.length} label={t.profile.statCompleted} />
+            <div className="mt-5 grid grid-cols-5 gap-2 sm:flex sm:gap-x-6">
+              <Stat value={completed.length} label={t.profile.statCompleted} href={`/users/${profile.username}/completed`} />
               <Stat
                 value={getReviewsByUser(state, profile.id).length}
                 label={t.profile.statReviews}
+                href={`/users/${profile.username}/reviews`}
               />
-              <Stat value={lists.length} label={t.profile.statLists} />
-              <Stat value={followers} label={t.profile.statFollowers} />
-              <Stat value={followingCount} label={t.profile.statFollowing} />
+              <Stat value={lists.length} label={t.profile.statLists} href={`/users/${profile.username}/lists`} />
+              <Stat value={followers} label={t.profile.statFollowers} href={`/users/${profile.username}/followers`} />
+              <Stat value={followingCount} label={t.profile.statFollowing} href={`/users/${profile.username}/following`} />
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
