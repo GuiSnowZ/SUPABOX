@@ -8,7 +8,7 @@ import { Container, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { getProfileById } from "@/features/app/selectors";
 import { loaders, useAppState, useLoad } from "@/features/app/store";
 import { ReviewCard } from "./review-card";
-import { ShareReview } from "./share-review";
+import { StoryShare } from "./story-share";
 import { useT } from "@/i18n/client";
 
 /** `/reviews/[id]`: one review with likes and its comment thread. */
@@ -46,7 +46,7 @@ export function ReviewDetail({ id }: { id: string }) {
       <div className="pb-6">
         <ReviewCard review={review} game={game} author={author} showAuthor full editable={review.userId === state.currentUserId} />
         <div className="mt-4">
-          <ShareReview reviewId={review.id} gameTitle={game.title} gameSlug={game.slug} />
+          <StoryShare reviewId={review.id} version={review.updatedAt} gameTitle={game.title} gameSlug={game.slug} />
         </div>
       </div>
       <Comments kind="review" targetId={review.id} ownerId={review.userId} />

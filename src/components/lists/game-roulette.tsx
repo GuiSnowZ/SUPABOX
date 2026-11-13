@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { getWishlist } from "@/features/app/selectors";
 import { registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn } from "@/features/app/ui-store";
+import { isReleasedOn, todayIn } from "@/lib/catalog/rows";
 import { cn, releaseYear } from "@/lib/utils";
 import type { Game } from "@/types";
 import { useLocale, useT } from "@/i18n/client";
@@ -59,7 +60,11 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
   const [phase, setPhase] = useState<Phase>({ kind: "choose" });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userId = state.currentUserId;
-  const wishlist = userId ? getWishlist(state, userId).map((e) => e.game) : [];
+  // Only games that are already out: an unreleased game can't be "what to play next".
+  const saved = userId ? getWishlist(state, userId).map((e) => e.game) : [];
+  // Read the date only while the dialog is open (never during prerendering).
+  const today = open ? todayIn(Intl.DateTimeFormat().resolvedOptions().timeZone) : null;
+  const wishlist = today ? saved.filter((g) => isReleasedOn(g, today)) : [];
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
@@ -125,7 +130,9 @@ export function GameRoulette({ classics }: { classics: Game[] }) {
                   ? t.roulette.wantSignedOut
                   : wishlist.length
                     ? t.roulette.wantCount(wishlist.length)
-                    : t.roulette.wantEmpty}
+                    : saved.length
+                      ? t.roulette.wantNoneReleased
+                      : t.roulette.wantEmpty}
               </span>
             </button>
             <button

@@ -20,10 +20,14 @@ export function ReviewEditor({
   game,
   existing,
   onDone,
+  onSaved,
 }: {
   game: Game;
   existing?: Review;
+  /** Called when the editor closes (cancel, delete, or after saving if there's no onSaved). */
   onDone?: () => void;
+  /** Called after a successful save instead of onDone. */
+  onSaved?: () => void;
 }) {
   const t = useT();
   const [rating, setRating] = useState<number | null>(existing?.rating ?? null);
@@ -43,7 +47,8 @@ export function ReviewEditor({
     }
     setError(null);
     toast(existing ? t.reviews.updated : t.reviews.published);
-    onDone?.();
+    if (onSaved) onSaved();
+    else onDone?.();
   }
 
   return (
