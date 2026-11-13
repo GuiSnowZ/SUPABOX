@@ -9,7 +9,7 @@ import { isSupabaseConfigured, SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase
  * the page. Unknown slugs are answered with a real 404 here instead.
  */
 /** Fixed pages under /games/ that are not game slugs. */
-const GAME_SECTION_PAGES = new Set(["new-releases", "coming-soon"]);
+const GAME_SECTION_PAGES = new Set(["new-releases", "coming-soon", "trending", "recent", "hidden-gems", "for-you", "friends"]);
 
 async function unknownGame(pathname: string): Promise<boolean> {
   const m = /^\/games\/([^/]+)\/?$/.exec(pathname);

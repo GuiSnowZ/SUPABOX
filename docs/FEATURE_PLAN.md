@@ -117,11 +117,21 @@ Regra geral: reaproveitar o que já existe (diário, reviews, listas, seguidores
 
 ## Fase 7 — Preparação para o Google (por último)
 
-- [ ] **S4. Sitemap automático:** jogos, perfis públicos, listas públicas e oficiais.
-- [ ] **S5. Imagem de compartilhamento:** card gerado para cada jogo, perfil, lista e review (WhatsApp, X, Discord).
-- [ ] **S6. Dados estruturados** (schema.org): nota, capa e data aparecendo no resultado do Google.
-- [ ] **S7. Página inicial para visitantes:** explica o Supabox para quem não tem conta.
-- [ ] **Liberar indexação:** `NEXT_PUBLIC_ALLOW_INDEXING=true` e cadastrar o site no Google Search Console. Só com a sua aprovação.
+- [x] **S4. Sitemap automático:** jogos, perfis públicos, listas públicas e oficiais.
+- [x] **S5. Imagem de compartilhamento:** card gerado para cada jogo, perfil, lista e review (WhatsApp, X, Discord), e imagem para Stories com as estrelas.
+- [x] **S6. Dados estruturados** (schema.org): nota, capa e data aparecendo no resultado do Google.
+- [x] **S7. Página inicial para visitantes:** explica o Supabox para quem não tem conta.
+- [x] **Liberar indexação:** `NEXT_PUBLIC_ALLOW_INDEXING=true` e site verificado no Google Search Console, com sitemap enviado.
+
+## Fase 8 — Carrossel das listas e Home de descoberta
+
+- [x] **Carrossel das listas:** abria o jogo errado ou um quadro vazio. Causa: o jogo "atual" vinha da posição de rolagem, que ainda não existia enquanto a janela abria. Agora o índice escolhido é a única fonte (setas, teclado e deslizar). Testes em `src/lib/carousel.test.ts`.
+- [x] **Home com fileiras de descoberta** (regras em `src/lib/discovery.ts`, testadas em `discovery.test.ts`):
+  - **Em Alta** (`/games/trending`): atividade dos últimos 7 dias. Cada pessoa conta uma vez por jogo, pela ação mais forte (review/nota 3, jogando/zerado 2, Quero Jogar 1), com peso maior para os dias mais recentes; mínimo de 2 pessoas. Completado com popularidade do IGDB (avisado na tela) enquanto a comunidade é pequena.
+  - **Você Pode Gostar** (`/games/for-you`): gêneros tirados de favoritos, notas, zerados e jogando (notas baixas contam contra); sugere jogos bem avaliados desses gêneros que não estão na biblioteca. Sem histórico suficiente mostra sugestões populares, avisando que não são personalizadas. Calculado no navegador; página não indexada.
+  - **Popular Entre Amigos** (`/games/friends`): atividade de quem você segue nos últimos 30 dias, mesma fórmula. Sem seguir ninguém mostra convite para encontrar pessoas.
+  - **Lançados Recentemente** (`/games/recent`): lançados nos últimos 12 meses, do mais novo para o mais antigo, popularidade mínima 20 no IGDB. A data é o primeiro lançamento em qualquer plataforma; jogos futuros e sem data ficam de fora.
+  - **Joias Escondidas** (`/games/hidden-gems`): 3+ notas, média bayesiana ≥ 3,8★ (amostras pequenas puxadas para 3,5★) e fora dos ~1.500 jogos mais conhecidos. Completado com a lista oficial de Joias Escondidas (avisado na tela).
 
 ## Fora do escopo agora
 

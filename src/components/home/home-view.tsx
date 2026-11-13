@@ -2,13 +2,15 @@
 
 import { BarChart3, BookMarked, CalendarDays, CheckCircle2, Gamepad2, ListChecks, NotebookPen, PenLine, PlayCircle, Plus, Star, Users } from "lucide-react";
 import Link from "next/link";
-import { GameCard, GameGrid } from "@/components/games/game-card";
 import { QuickAddButton } from "@/components/games/quick-add";
 import { TodaysReleases } from "@/components/games/todays-releases";
 import { GameCover } from "@/components/games/game-cover";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
+import { useForYou, useFriendsActivity } from "@/features/app/discovery";
+import type { DiscoveryRowData, RowSource } from "@/lib/discovery";
+import { DiscoveryRow } from "./discovery-row";
 import { Container, EmptyState, SectionHeader, Skeleton } from "@/components/ui/primitives";
 import { StarRating } from "@/components/ui/star-rating";
 import { getFeed, getProfileById } from "@/features/app/selectors";
@@ -179,7 +181,74 @@ function Hero({ covers, className }: { covers: Game[]; className?: string }) {
   );
 }
 
-export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[] }) {
+/** Data-source note for a row (nothing when it's purely Supabox community data). */
+function sourceNote(source: RowSource, notes: { mixed: string; catalog: string }): string | null {
+  return source === "community" ? null : notes[source];
+}
+
+function ForYouRow({ picks }: { picks: Game[] }) {
+  const t = useT();
+  const state = useAppState();
+  const { status, items, personalized } = useForYou(picks, 12);
+  return (
+    <DiscoveryRow
+      id="for-you"
+      title={t.discover.forYou.title}
+      description={t.discover.forYou.description}
+      note={personalized ? null : state.currentUserId ? t.discover.forYou.fallback : t.discover.forYou.signedOut}
+      how={t.discover.forYou.how}
+      href="/games/for-you"
+      items={status === "loading" ? null : items}
+      error={status === "error"}
+    />
+  );
+}
+
+function FriendsRow() {
+  const t = useT();
+  const { status, items } = useFriendsActivity(12);
+  if (status === "signed-out") return null;
+  return (
+    <DiscoveryRow
+      id="friends"
+      title={t.discover.friends.title}
+      description={t.discover.friends.description}
+      href="/games/friends"
+      items={status === "loading" ? null : items}
+      error={status === "error"}
+      empty={
+        status === "no-follows" ? (
+          <EmptyState
+            icon={<Users />}
+            title={t.discover.friends.noFollows}
+            description={t.discover.friends.noFollowsHint}
+            action={
+              <ButtonLink href="/reviews" variant="secondary" size="sm">
+                {t.discover.friends.findPeople}
+              </ButtonLink>
+            }
+          />
+        ) : (
+          <p className="text-sm text-muted">{t.discover.friends.noActivity}</p>
+        )
+      }
+    />
+  );
+}
+
+export function HomeView({
+  trending,
+  recent,
+  gems,
+  picks,
+  today = [],
+}: {
+  trending: DiscoveryRowData;
+  recent: Game[];
+  gems: DiscoveryRowData;
+  picks: Game[];
+  today?: Game[];
+}) {
   const t = useT();
   const state = useAppState();
   const signedIn = Boolean(state.currentUserId);
@@ -207,16 +276,39 @@ export function HomeView({ recent, today = [] }: { recent: Game[]; today?: Game[
           </div>
         ) : null}
 
-        <section aria-labelledby="new-heading">
-          <SectionHeader id="new-heading" title={t.home.biggest} href="/games" />
-          <GameGrid>
-            {recent.slice(0, 6).map((g, i) => (
-              <GameCard key={g.id} game={g} className={i === 4 ? "md:max-lg:hidden" : i === 5 ? "md:max-xl:hidden" : undefined} />
-            ))}
-          </GameGrid>
-        </section>
+        <DiscoveryRow
+          id="trending"
+          title={t.discover.trending.title}
+          description={t.discover.trending.description}
+          note={sourceNote(trending.source, t.discover.trending)}
+          how={t.discover.trending.how}
+          href="/games/trending"
+          items={trending.items}
+        />
+
+        <ForYouRow picks={picks} />
+
+        <FriendsRow />
 
         <TodaysReleases games={today} />
+
+        <DiscoveryRow
+          id="recent"
+          title={t.discover.recent.title}
+          description={t.discover.recent.description}
+          href="/games/recent"
+          items={recent.map((game) => ({ game }))}
+        />
+
+        <DiscoveryRow
+          id="gems"
+          title={t.discover.gems.title}
+          description={t.discover.gems.description}
+          note={sourceNote(gems.source, t.discover.gems)}
+          how={t.discover.gems.how}
+          href="/games/hidden-gems"
+          items={gems.items}
+        />
 
         <div className="grid gap-14 lg:grid-cols-[1.2fr_1fr]">
           <section aria-labelledby="activity-heading">

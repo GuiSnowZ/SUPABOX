@@ -16,6 +16,7 @@ import { MAX_REVIEW_LENGTH } from "@/features/app/state";
 import { actions, registerGames, useAppState } from "@/features/app/store";
 import { promptSignIn, toast } from "@/features/app/ui-store";
 import { isReleasedOn, todayIso } from "@/lib/catalog/rows";
+import { clampIndex, swipeStep } from "@/lib/carousel";
 import { cn, releaseYear } from "@/lib/utils";
 import type { Game } from "@/types";
 import { useLocale, useT } from "@/i18n/client";
@@ -129,8 +130,14 @@ function GameSlide({ game, label }: { game: Game; label?: string | null }) {
 }
 
 /**
- * Swipeable, one-game-at-a-time browser over a list of games (scroll-snap, so
- * touch swiping works natively; arrows and ←/→ keys too).
+ * One-game-at-a-time browser over a list of games. The selected index is the
+ * single source of truth (arrows, ←/→ keys and touch swipes change it), so the
+ * game shown, the "n / total" counter and the page link can never disagree.
+ *
+ * (It used to follow the scroll position of a scroll-snap strip. Opening it on
+ * game 12 scrolled the strip while the dialog was still laying out, the scroll
+ * stayed at game 1, and only slides near 12 were rendered — so you got "12 / 25"
+ * over an empty slide, or game 1 when you'd clicked game 2 or 3.)
  */
 export function GameCarousel({
   games,
@@ -145,81 +152,78 @@ export function GameCarousel({
   className?: string;
 }) {
   const t = useT();
-  const track = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(initialIndex);
+  const [index, setIndex] = useState(() => clampIndex(initialIndex, games.length));
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const current = clampIndex(index, games.length);
+  const game = games[current];
 
   useEffect(() => {
     registerGames(games);
   }, [games]);
 
-  useEffect(() => {
-    const el = track.current;
-    if (el) el.scrollTo({ left: initialIndex * el.clientWidth, behavior: "instant" as ScrollBehavior });
-  }, [initialIndex]);
-
   function go(to: number) {
-    const el = track.current;
-    if (!el) return;
-    const next = Math.max(0, Math.min(games.length - 1, to));
-    el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+    const next = clampIndex(to, games.length);
+    if (next === current) return;
+    setDirection(next > current ? 1 : -1);
+    setIndex(next);
   }
 
-  if (!games.length) return null;
+  if (!game) return null;
 
   return (
     <div
       className={cn("relative", className)}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={t.carousel.games}
       onKeyDown={(e) => {
         if ((e.target as HTMLElement).closest("textarea, input")) return;
-        if (e.key === "ArrowRight") go(index + 1);
-        if (e.key === "ArrowLeft") go(index - 1);
+        if (e.key === "ArrowRight") go(current + 1);
+        if (e.key === "ArrowLeft") go(current - 1);
+      }}
+      onTouchStart={(e) => {
+        const p = e.touches[0];
+        touch.current = p ? { x: p.clientX, y: p.clientY } : null;
+      }}
+      onTouchEnd={(e) => {
+        const start = touch.current;
+        const p = e.changedTouches[0];
+        touch.current = null;
+        if (!start || !p || (e.target as HTMLElement).closest("textarea, input")) return;
+        const step = swipeStep(p.clientX - start.x, p.clientY - start.y);
+        if (step) go(current + step);
       }}
     >
       <div
-        ref={track}
-        role="region"
-        aria-roledescription="carousel"
-        aria-label={t.carousel.games}
-        tabIndex={0}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          setIndex(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
-        }}
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] focus-visible:outline-none [&::-webkit-scrollbar]:hidden"
+        key={`${game.id}-${current}`}
+        role="group"
+        aria-roledescription="slide"
+        aria-label={t.carousel.slide(current + 1, games.length, game.title)}
+        className={cn("min-h-96", direction === 1 ? "animate-slide-in-right" : "animate-slide-in-left")}
       >
-        {games.map((g, i) => (
-          <div
-            key={`${g.id}-${i}`}
-            className="w-full shrink-0 snap-center"
-            role="group"
-            aria-roledescription="slide"
-            aria-label={t.carousel.slide(i + 1, games.length, g.title)}
-            aria-hidden={Math.abs(i - index) > 1 ? true : undefined}
-          >
-            {Math.abs(i - index) <= 2 ? <GameSlide game={g} label={labels?.[i]} /> : <div className="h-96" />}
-          </div>
-        ))}
+        <GameSlide game={game} label={labels?.[current]} />
       </div>
 
       <div className="mt-5 flex items-center justify-center gap-3">
-        <Button variant="secondary" size="icon" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t.carousel.previous}>
+        <Button variant="secondary" size="icon" onClick={() => go(current - 1)} disabled={current === 0} aria-label={t.carousel.previous}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <span className="min-w-16 text-center text-sm text-muted tabular-nums" aria-live="polite">
-          {index + 1} / {games.length}
+          {current + 1} / {games.length}
         </span>
         <Button
           variant="secondary"
           size="icon"
-          onClick={() => go(index + 1)}
-          disabled={index === games.length - 1}
+          onClick={() => go(current + 1)}
+          disabled={current === games.length - 1}
           aria-label={t.carousel.next}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
       <p className="mt-2 text-center">
-        <Link href={`/games/${games[index]?.slug}`} className="inline-flex items-center gap-1 text-xs text-faint hover:text-fg">
+        <Link href={`/games/${game.slug}`} className="inline-flex items-center gap-1 text-xs text-faint hover:text-fg">
           {t.carousel.openPage} <ExternalLink className="h-3 w-3" />
         </Link>
       </p>
@@ -243,7 +247,8 @@ export function ListCarouselDialog({
 }) {
   return (
     <Dialog open={index !== null} onClose={onClose} title={title} className="sm:w-[min(92vw,36rem)]">
-      {index !== null ? <GameCarousel games={games} labels={labels} initialIndex={index} /> : null}
+      {/* Keyed by the clicked position: every opening starts fresh on that game. */}
+      {index !== null ? <GameCarousel key={index} games={games} labels={labels} initialIndex={index} /> : null}
     </Dialog>
   );
 }
