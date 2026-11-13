@@ -20,7 +20,11 @@ export function LanguageSwitcher() {
     if (!isLocale(next) || next === locale) return;
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
     const userId = getAppState().currentUserId;
-    if (userId) await getSupabase().from("profiles").update({ locale: next }).eq("id", userId);
+    if (userId) {
+      const db = getSupabase();
+      // The profile keeps the choice; the account metadata picks the language of auth emails.
+      await Promise.all([db.from("profiles").update({ locale: next }).eq("id", userId), db.auth.updateUser({ data: { locale: next } })]);
+    }
     // /pt-BR/… always shows Portuguese, so leave that prefix when switching away.
     const { pathname, search, hash } = window.location;
     const plain = pathname.replace(/^\/pt-BR(?=\/|$)/, "") || "/";

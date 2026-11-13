@@ -27,6 +27,11 @@ function notConfigured(): AuthResult {
   return { ok: false, error: "Supabox isn't connected to its database yet." };
 }
 
+/** The language the site is being shown in ("pt-BR" or "en"). */
+function pageLocale(): "pt-BR" | "en" {
+  return document.documentElement.lang === "pt-BR" ? "pt-BR" : "en";
+}
+
 /** Where email links (confirmation, password reset) should land. */
 function callbackUrl(next: string) {
   return `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`;
@@ -64,7 +69,8 @@ export async function signUp(input: SignUpInput): Promise<AuthResult & { needsCo
     email: input.email.trim(),
     password: input.password,
     options: {
-      data: { username, display_name: input.displayName.trim() || username },
+      // locale picks the language of Supabox's auth emails (see supabase/templates).
+      data: { username, display_name: input.displayName.trim() || username, locale: pageLocale() },
       emailRedirectTo: callbackUrl("/welcome"),
     },
   });
