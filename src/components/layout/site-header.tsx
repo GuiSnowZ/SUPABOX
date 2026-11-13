@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Library, LogIn, LogOut, Search, Star, User } from "lucide-react";
+import { BookMarked, Library, LogIn, LogOut, Star, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -156,13 +156,6 @@ export function SiteHeader() {
           <ActiveDesktopNav />
         </Suspense>
         <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/games#search"
-            aria-label={t.common.searchGames}
-            className={buttonClasses("ghost", "icon", "h-9 w-9")}
-          >
-            <Search className="h-4 w-4" />
-          </Link>
           <NotificationBell />
           <Link href="/library" className={buttonClasses("ghost", "sm", "max-lg:hidden")}>
             <Library className="h-4 w-4" />
