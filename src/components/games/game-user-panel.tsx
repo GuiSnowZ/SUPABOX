@@ -6,6 +6,7 @@ import { type FormEvent, useState } from "react";
 import { WishlistButton } from "@/components/games/wishlist-button";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { ReviewEditor } from "@/components/reviews/review-editor";
+import { ShareRatingButton } from "@/components/reviews/story-share";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/confirm-button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
@@ -70,6 +71,7 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
   const state = useAppState();
   const userId = state.currentUserId;
   const entry = getUserGame(state, userId, game.id);
+  const myReview = getUserReview(state, userId, game.id);
 
   async function setStatus(status: LibraryStatus | null) {
     if (!userId) return promptSignIn(t.panel.signInToAdd(game.title));
@@ -99,6 +101,16 @@ export function GameActions({ game, released }: { game: Game; released: boolean 
         </Select>
         {!released ? <p className="mt-1.5 text-xs text-faint">{t.panel.notReleased}</p> : null}
       </div>
+      {/* Appears once you've rated the game. */}
+      {myReview?.rating ? (
+        <ShareRatingButton
+          reviewId={myReview.id}
+          version={myReview.updatedAt}
+          gameTitle={game.title}
+          gameSlug={game.slug}
+          className="w-full"
+        />
+      ) : null}
     </div>
   );
 }

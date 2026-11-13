@@ -748,6 +748,7 @@ export const ptBR: Dictionary = {
     list: "Lista",
     listBy: (name: string) => `Uma lista de ${name}`,
     shareStory: "Compartilhar nos Stories",
+    shareMyRating: "Compartilhar minha nota",
     shareTitle: (game: string) => `Compartilhe sua nota de ${game}`,
     shareHint: "Poste nos Stories do Instagram ou mande para quem quiser.",
     share: "Compartilhar",

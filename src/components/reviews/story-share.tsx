@@ -3,6 +3,7 @@
 import { Download, Link2, RotateCw, Share2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/primitives";
 import { toast } from "@/features/app/ui-store";
 import { useLocale, useT } from "@/i18n/client";
@@ -154,5 +155,45 @@ export function StoryShare({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Share my rating" on a game page: opens the same Stories preview as the
+ * rating prompt. Only rendered once the viewer has rated the game.
+ */
+export function ShareRatingButton({
+  reviewId,
+  version,
+  gameTitle,
+  gameSlug,
+  className,
+}: {
+  reviewId: string;
+  version: string;
+  gameTitle: string;
+  gameSlug: string;
+  className?: string;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="secondary" className={className} onClick={() => setOpen(true)}>
+        <Share2 className="h-4 w-4" /> {t.og.shareMyRating}
+      </Button>
+      <Dialog open={open} onClose={() => setOpen(false)} title={t.og.shareTitle(gameTitle)} description={t.og.shareHint}>
+        {open ? (
+          <div className="space-y-5">
+            <StoryShare reviewId={reviewId} version={version} gameTitle={gameTitle} gameSlug={gameSlug} preview />
+            <div className="flex justify-center">
+              <Button variant="ghost" onClick={() => setOpen(false)}>
+                {t.og.done}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
+    </>
   );
 }

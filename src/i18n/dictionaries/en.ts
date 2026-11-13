@@ -747,6 +747,7 @@ export const en = {
     list: "List",
     listBy: (name: string) => `A list by ${name}`,
     shareStory: "Share to Stories",
+    shareMyRating: "Share my rating",
     shareTitle: (game: string) => `Share your ${game} rating`,
     shareHint: "Post it to your Instagram Stories or send it anywhere.",
     share: "Share",
