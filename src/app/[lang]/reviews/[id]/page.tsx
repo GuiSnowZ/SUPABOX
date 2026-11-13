@@ -12,13 +12,13 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/reviews/[i
   const { t, locale } = await getT(params);
   const { id } = await params;
   const db = getPublicSupabase();
-  if (!db || !UUID.test(id)) return { title: t.reviews.pageTitle };
+  if (!db || !UUID.test(id)) return { title: t.reviews.pageTitle, robots: { index: false, follow: false } };
   const { data } = await db
     .from("reviews")
     .select("body, contains_spoilers, profiles!reviews_user_id_fkey(display_name), games(title)")
     .eq("id", id)
     .maybeSingle();
-  if (!data) return { title: t.reviews.pageTitle };
+  if (!data) return { title: t.reviews.pageTitle, robots: { index: false, follow: false } };
   const game = (data.games as unknown as { title: string } | null)?.title ?? "";
   const author = (data.profiles as unknown as { display_name: string } | null)?.display_name ?? "";
   const title = `${game} — ${t.og.reviewBy(author)}`;

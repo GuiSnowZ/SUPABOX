@@ -12,10 +12,10 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/lists/[id]
   const { id } = await params;
   const db = getPublicSupabase();
   const { t, locale } = await getT(params);
-  if (!db || !UUID.test(id)) return { title: t.lists.title };
+  if (!db || !UUID.test(id)) return { title: t.lists.title, robots: { index: false, follow: false } };
   // Anonymous query: private lists are never visible here, so their titles don't leak.
   const { data } = await db.from("lists").select("title, description").eq("id", id).maybeSingle();
-  if (!data) return { title: t.lists.title };
+  if (!data) return { title: t.lists.title, robots: { index: false, follow: false } };
   return {
     title: data.title,
     description: data.description || undefined,

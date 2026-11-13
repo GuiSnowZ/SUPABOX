@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Minimal IGDB API client (https://api-docs.igdb.com).
  *

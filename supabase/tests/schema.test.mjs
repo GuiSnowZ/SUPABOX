@@ -217,6 +217,13 @@ await as(A, "update public.reviews set like_count = 999 where id = $1", [revA]);
 ok("authors cannot fake like counts", (await db.query("select like_count from public.reviews where id = $1", [revA])).rows[0].like_count === 1);
 await as(B, "delete from public.review_likes where user_id = $1 and review_id = $2", [B, revA]);
 ok("unlike decrements and removes the notification", (await db.query("select like_count from public.reviews where id = $1", [revA])).rows[0].like_count === 0 && !(await notifs(A)).some((n) => n.kind === "review_like"));
+const before = (await db.query("select updated_at from public.reviews where id = $1", [revA])).rows[0].updated_at;
+await as(B, "insert into public.review_likes (user_id, review_id) values ($1, $2)", [B, revA]);
+await as(B, "delete from public.review_likes where user_id = $1 and review_id = $2", [B, revA]);
+const after = (await db.query("select updated_at from public.reviews where id = $1", [revA])).rows[0].updated_at;
+ok("likes don't mark a review as edited", before.getTime() === after.getTime());
+await as(A, "update public.reviews set body = 'Edited text' where id = $1", [revA]);
+ok("real edits still update the edit time", (await db.query("select updated_at from public.reviews where id = $1", [revA])).rows[0].updated_at.getTime() > before.getTime());
 
 const cB = (await as(B, "insert into public.comments (user_id, review_id, body) values ($1, $2, 'Nice!') returning id", [B, revA])).rows[0].id;
 ok("comment increments the counter and notifies the author", (await db.query("select comment_count from public.reviews where id = $1", [revA])).rows[0].comment_count === 1 && (await notifs(A)).some((n) => n.kind === "review_comment"));
@@ -236,6 +243,14 @@ await as(B, "insert into public.play_sessions (user_id, game_id, started_on, hou
 ok("diary stores hours and platform", (await db.query("select hours::float h, platform from public.play_sessions where user_id = $1", [B])).rows.some((r) => r.h === 12.5 && r.platform === "PlayStation 5"));
 ok("negative hours rejected", await fails(B, "insert into public.play_sessions (user_id, game_id, started_on, hours) values ($1, $2, '2026-01-01', -1)", [B, G1]));
 ok("finish date after start", await fails(A, "insert into public.play_sessions (user_id, game_id, started_on, finished_on) values ($1, $2, '2026-01-02', '2026-01-01')", [A, G1]));
+
+// Comment flood protection
+let posted = 0;
+for (let i = 0; i < 12; i++) {
+  try { await as(B, "insert into public.comments (user_id, review_id, body) values ($1, $2, $3)", [B, revA, `c${i}`]); posted++; } catch { break; }
+}
+const recentB = (await db.query("select count(*)::int n from public.comments where user_id = $1 and created_at > now() - interval '1 minute'", [B])).rows[0].n;
+ok("comments are limited to 10 a minute", recentB === 10 && posted < 12);
 
 // Account deletion cascades
 await db.query("delete from auth.users where id = $1", [A]);

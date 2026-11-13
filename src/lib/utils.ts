@@ -12,23 +12,31 @@ export function cn(...classes: Array<string | false | null | undefined>): string
 /** BCP 47 tag for Intl formatting ("en" UI → "en-US"). */
 const intlTag = (locale: string) => (locale === "pt-BR" ? "pt-BR" : "en-US");
 const fmtCache = new Map<string, Intl.DateTimeFormat>();
-function dateFormatter(locale: string, opts: Intl.DateTimeFormatOptions, key: string): Intl.DateTimeFormat {
-  const k = `${locale}:${key}`;
+function dateFormatter(locale: string, opts: Intl.DateTimeFormatOptions, key: string, local = false): Intl.DateTimeFormat {
+  const k = `${locale}:${key}:${local ? "local" : "utc"}`;
   let f = fmtCache.get(k);
   if (!f) {
-    f = new Intl.DateTimeFormat(intlTag(locale), { ...opts, timeZone: "UTC" });
+    f = new Intl.DateTimeFormat(intlTag(locale), { ...opts, timeZone: local ? undefined : "UTC" });
     fmtCache.set(k, f);
   }
   return f;
 }
 
-/** "Oct 30, 2026" / "30 de out. de 2026". Dates are formatted in UTC so server and client output match. */
+/**
+ * Calendar dates ("2026-11-12") are shown as-is (UTC). Moments in time
+ * ("2026-11-13T00:30:00Z", e.g. when a review was written) are shown in the
+ * viewer's own time zone in the browser, so a review written at 9:30 pm in
+ * Brazil doesn't show the next day. On the server they fall back to UTC.
+ */
+const inLocalTime = (iso: string) => typeof window !== "undefined" && iso.includes("T");
+
+/** "Oct 30, 2026" / "30 de out. de 2026". */
 export function formatDate(iso: string, locale = "en"): string {
-  return dateFormatter(locale, { year: "numeric", month: "short", day: "numeric" }, "date").format(new Date(iso));
+  return dateFormatter(locale, { year: "numeric", month: "short", day: "numeric" }, "date", inLocalTime(iso)).format(new Date(iso));
 }
 
 export function formatShortDate(iso: string, locale = "en"): string {
-  return dateFormatter(locale, { month: "short", day: "numeric" }, "short").format(new Date(iso));
+  return dateFormatter(locale, { month: "short", day: "numeric" }, "short", inLocalTime(iso)).format(new Date(iso));
 }
 
 export function formatReleaseDate(iso: string | null, locale = "en"): string {

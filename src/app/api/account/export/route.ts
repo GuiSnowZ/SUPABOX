@@ -14,7 +14,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Sign in to download your data." }, { status: 401 });
 
   const own = (table: string, column = "user_id") => db.from(table).select("*").eq(column, user.id);
-  const [profile, library, reviews, diary, lists, favorites, following, followers, activity] = await Promise.all([
+  const [profile, library, reviews, diary, lists, favorites, following, followers, activity, comments, reviewLikes, listLikes, preferences] = await Promise.all([
     db.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     own("user_games"),
     own("reviews"),
@@ -24,8 +24,12 @@ export async function GET() {
     own("follows", "follower_id"),
     own("follows", "following_id"),
     own("activities"),
+    own("comments"),
+    own("review_likes"),
+    own("list_likes"),
+    own("notification_preferences"),
   ]);
-  const failed = [profile, library, reviews, diary, lists, favorites, following, followers, activity].find((r) => r.error);
+  const failed = [profile, library, reviews, diary, lists, favorites, following, followers, activity, comments, reviewLikes, listLikes, preferences].find((r) => r.error);
   if (failed?.error) return NextResponse.json({ error: "Couldn't export your data. Please try again." }, { status: 500 });
 
   const payload = {
@@ -40,6 +44,10 @@ export async function GET() {
     following: following.data,
     followers: followers.data,
     activity: activity.data,
+    comments: comments.data,
+    liked_reviews: reviewLikes.data,
+    liked_lists: listLikes.data,
+    notification_settings: preferences.data,
     note: "Game ids refer to Supabox's catalog; see https://supaboxd.com/games for details.",
   };
   const name = (profile.data?.username as string | undefined) ?? "account";

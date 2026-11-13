@@ -18,6 +18,7 @@ const EXACT_PT: Record<string, string> = {
   "Add a rating, some text, or both.": "Dê uma nota, escreva algo, ou os dois.",
   "That already exists.": "Isso já existe.",
   "You don't have permission to do that.": "Você não tem permissão para fazer isso.",
+  "You're commenting too fast. Please wait a moment.": "Você está comentando rápido demais. Espere um pouco.",
   "That value isn't allowed.": "Esse valor não é permitido.",
   "Couldn't reach Supabox. Check your connection and try again.": "Não foi possível conectar ao Supabox. Verifique sua conexão e tente de novo.",
   "You can only delete your own reviews.": "Você só pode excluir suas próprias reviews.",

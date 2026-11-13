@@ -1,11 +1,8 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safe-next";
 
-/** Only allow redirects to paths on this site (prevents open redirects). */
-function safeNext(value: string | null): string {
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
-}
 
 /**
  * Landing point for links in Supabase auth emails (sign-up confirmation,
