@@ -6,18 +6,18 @@ import { Fragment, Suspense } from "react";
 import { QuickAddButton } from "@/components/games/quick-add";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/client";
-import { isActive, PRIMARY_NAV } from "./nav-config";
+import { isActive, MOBILE_NAV } from "./nav-config";
 
 function Tabs({ pathname }: { pathname: string | null }) {
   const t = useT();
   return (
     <ul className="grid grid-cols-5">
-      {PRIMARY_NAV.map((item, i) => {
+      {MOBILE_NAV.map((item, i) => {
         const active = isActive(item, pathname);
         const Icon = item.icon;
         return (
           <Fragment key={item.href}>
-            {i === Math.floor(PRIMARY_NAV.length / 2) ? (
+            {i === Math.floor(MOBILE_NAV.length / 2) ? (
               <li>
                 <QuickAddButton variant="tab" />
               </li>
@@ -46,7 +46,7 @@ function ActiveTabs() {
   return <Tabs pathname={usePathname()} />;
 }
 
-/** Bottom tab bar for small screens: the four destinations of the desktop header plus the quick-add "+" in the centre. */
+/** Bottom tab bar for small screens: Home, Games, Lists and Profile around the quick-add "+" in the centre. */
 export function MobileTabBar() {
   return (
     <nav

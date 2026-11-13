@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, Library, LogIn, LogOut, Search, User } from "lucide-react";
+import { BookMarked, Library, LogIn, LogOut, Search, Star, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -121,6 +121,9 @@ function UserMenu() {
           </Link>
           <Link role="menuitem" href="/library/wishlist" className={item} onClick={() => setOpen(false)}>
             <BookMarked className="h-4 w-4" /> {t.nav.wishlist}
+          </Link>
+          <Link role="menuitem" href="/reviews" className={item} onClick={() => setOpen(false)}>
+            <Star className="h-4 w-4" /> {t.nav.reviews}
           </Link>
           <div className="my-1 h-px bg-border" />
           <button
