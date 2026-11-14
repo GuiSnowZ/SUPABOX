@@ -253,9 +253,25 @@ export function startStore() {
     setTimeout(() => {
       const fresh = userId === s.currentUserId ? get() : { ...createEmptyState(), games: get().games };
       commit({ ...fresh, currentUserId: userId, authReady: true });
-      void loaders.bootstrap(true);
+      void loaders.bootstrap(true).then(() => (userId ? dropDeletedAccountSession(db, userId) : undefined));
     }, 0);
   });
+}
+
+/**
+ * A browser can still hold the session of an account that was deleted (on
+ * another device, or by support). Its profile never loads, so pages would wait
+ * forever. If the profile is missing, ask the auth server; when it says the
+ * account no longer exists, sign out locally so the visitor view takes over.
+ * Network errors don't sign anyone out.
+ */
+async function dropDeletedAccountSession(db: SupabaseClient, userId: ID) {
+  if (get().currentUserId !== userId || get().profiles.some((p) => p.id === userId)) return;
+  const { data, error } = await db.auth.getUser();
+  const gone = error
+    ? [401, 403, 404].includes(error.status ?? 0) || /not exist|not found|user_not_found/i.test(`${error.code ?? ""} ${error.message}`)
+    : !data.user;
+  if (gone) await db.auth.signOut({ scope: "local" });
 }
 
 // ——— Writes ———
